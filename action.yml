@@ -17,6 +17,9 @@ inputs:
   lcov-base:
     description: The location of the lcov file for the base branch. Applicable for single repo setup.
     required: false
+  app-name:
+    description: App name to display on comment
+    required: false
 runs:
   using: node12
   main: dist/main.js
