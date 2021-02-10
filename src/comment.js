@@ -9,6 +9,7 @@ import { tabulate } from "./tabulate";
  */
 const renderEmoji = pdiff => {
     if (pdiff.toFixed(2) < 0) return "❌";
+
     return "✅";
 };
 
@@ -30,12 +31,12 @@ const comparer = otherArray => current =>
  * @param {{Array<{packageName, lcovBasePath}>}} lcovBaseArrayForMonorepo
  * @param {*} options
  */
-export function commentForMonorepo(
+const commentForMonorepo = (
     lcovArrayForMonorepo,
     lcovBaseArrayForMonorepo,
     options,
-) {
-		const { base } = options;
+) => {
+    const { base } = options;
     const html = lcovArrayForMonorepo.map(lcovObj => {
         const baseLcov = lcovBaseArrayForMonorepo.find(
             el => el.packageName === lcovObj.packageName,
@@ -45,10 +46,26 @@ export function commentForMonorepo(
         const pafter = baseLcov ? percentage(lcovObj.lcov) : 0;
         const pdiff = pafter - pbefore;
         const plus = pdiff > 0 ? "+" : "";
-        const arrow = pdiff === 0 ? "" : pdiff < 0 ? "▾" : "▴";
 
-        const pdiffHtml = baseLcov ? th(renderEmoji(pdiff), " ", arrow, " ", plus, pdiff.toFixed(2), "%") : "";
-				let report = lcovObj.lcov;
+        let arrow = "";
+        if (pdiff < 0) {
+            arrow = "▾";
+        } else if (pdiff > 0) {
+            arrow = "▴";
+        }
+
+        const pdiffHtml = baseLcov
+            ? th(
+                  renderEmoji(pdiff),
+                  " ",
+                  arrow,
+                  " ",
+                  plus,
+                  pdiff.toFixed(2),
+                  "%",
+              )
+            : "";
+        let report = lcovObj.lcov;
 
         if (baseLcov) {
             const onlyInLcov = lcovObj.lcov.filter(comparer(baseLcov));
@@ -73,22 +90,30 @@ export function commentForMonorepo(
     const title = `Coverage after merging into ${b(base)} <p></p>`;
 
     return fragment(title, html.join(""));
-}
+};
 
 /**
  * Github comment for single repo
  * @param {raw lcov} lcov
  * @param {*} options
  */
-export function comment(lcov, before, options) {
-		const { appName, base } = options;
+const comment = (lcov, before, options) => {
+    const { appName, base } = options;
     const pbefore = before ? percentage(before) : 0;
     const pafter = before ? percentage(lcov) : 0;
     const pdiff = pafter - pbefore;
     const plus = pdiff > 0 ? "+" : "";
-    const arrow = pdiff === 0 ? "" : pdiff < 0 ? "▾" : "▴";
 
-		const pdiffHtml = before ? th(renderEmoji(pdiff), " ", arrow, " ", plus, pdiff.toFixed(2), "%") : "";
+    let arrow = "";
+    if (pdiff < 0) {
+        arrow = "▾";
+    } else if (pdiff > 0) {
+        arrow = "▴";
+    }
+
+    const pdiffHtml = before
+        ? th(renderEmoji(pdiff), " ", arrow, " ", plus, pdiff.toFixed(2), "%")
+        : "";
 
     let report = lcov;
 
@@ -98,16 +123,20 @@ export function comment(lcov, before, options) {
         report = onlyInBefore.concat(onlyInLcov);
     }
 
-		const title = `Coverage after merging into ${b(base)} <p></p>`;
-		const header = appName ? tbody(tr(th(appName), th(percentage(lcov).toFixed(2), '%'), pdiffHtml)) : tbody(tr(th(percentage(lcov).toFixed(2), '%'), pdiffHtml));
+    const title = `Coverage after merging into ${b(base)} <p></p>`;
+    const header = appName
+        ? tbody(
+              tr(th(appName), th(percentage(lcov).toFixed(2), "%"), pdiffHtml),
+          )
+        : tbody(tr(th(percentage(lcov).toFixed(2), "%"), pdiffHtml));
 
     return fragment(
-				title,
+        title,
         table(header),
         "\n\n",
         details(summary("Coverage Report"), tabulate(report, options)),
     );
-}
+};
 
 /**
  * Diff in coverage percentage for single repo
@@ -115,9 +144,7 @@ export function comment(lcov, before, options) {
  * @param {raw base lcov} before
  * @param {*} options
  */
-export function diff(lcov, before, options) {
-    return comment(lcov, before, options);
-}
+export const diff = (lcov, before, options) => comment(lcov, before, options);
 
 /**
  * Diff in coverage percentage for monorepo
@@ -125,14 +152,9 @@ export function diff(lcov, before, options) {
  * @param {{Array<{packageName, lcovBasePath}>}} lcovBaseArrayForMonorepo
  * @param {*} options
  */
-export function diffForMonorepo(
+export const diffForMonorepo = (
     lcovArrayForMonorepo,
     lcovBaseArrayForMonorepo,
     options,
-) {
-    return commentForMonorepo(
-        lcovArrayForMonorepo,
-        lcovBaseArrayForMonorepo,
-        options,
-    );
-}
+) =>
+    commentForMonorepo(lcovArrayForMonorepo, lcovBaseArrayForMonorepo, options);

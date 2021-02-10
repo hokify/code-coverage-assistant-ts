@@ -14,7 +14,7 @@
 
 const appendHiddenHeaderToComment = (body, hiddenHeader) => hiddenHeader + body;
 
-const listComments = async ({ client, context, prNumber, commentHeader, hiddenHeader }) => {
+const listComments = async ({ client, context, prNumber, hiddenHeader }) => {
     const { data: existingComments } = await client.issues.listComments({
         ...context.repo,
         issue_number: prNumber,
@@ -23,21 +23,21 @@ const listComments = async ({ client, context, prNumber, commentHeader, hiddenHe
     return existingComments.filter(({ body }) => body.startsWith(hiddenHeader));
 };
 
-const insertComment = async ({ client, context, prNumber, body }, hiddenHeader) =>
+const insertComment = ({ client, context, prNumber, body }, hiddenHeader) =>
     client.issues.createComment({
         ...context.repo,
         issue_number: prNumber,
         body: appendHiddenHeaderToComment(body, hiddenHeader),
     });
 
-const updateComment = async ({ client, context, body, commentId }, hiddenHeader) =>
+const updateComment = ({ client, context, body, commentId }, hiddenHeader) =>
     client.issues.updateComment({
         ...context.repo,
         comment_id: commentId,
         body: appendHiddenHeaderToComment(body, hiddenHeader),
     });
 
-const deleteComments = async ({ client, context, comments }) =>
+const deleteComments = ({ client, context, comments }) =>
     Promise.all(
         comments.map(({ id }) =>
             client.issues.deleteComment({
@@ -47,12 +47,18 @@ const deleteComments = async ({ client, context, comments }) =>
         ),
     );
 
-const upsertComment = async ({ client, context, prNumber, body, hiddenHeader }) => {
+export const upsertComment = async ({
+    client,
+    context,
+    prNumber,
+    body,
+    hiddenHeader,
+}) => {
     const existingComments = await listComments({
         client,
         context,
         prNumber,
-			  hiddenHeader,
+        hiddenHeader,
     });
     const last = existingComments.pop();
 
@@ -63,20 +69,22 @@ const upsertComment = async ({ client, context, prNumber, body, hiddenHeader }) 
     });
 
     return last
-        ? updateComment({
-              client,
-              context,
-              body,
-              commentId: last.id,
-          }, hiddenHeader)
-        : insertComment({
-              client,
-              context,
-              prNumber,
-              body,
-          }, hiddenHeader);
-};
-
-module.exports = {
-    upsertComment,
+        ? updateComment(
+              {
+                  client,
+                  context,
+                  body,
+                  commentId: last.id,
+              },
+              hiddenHeader,
+          )
+        : insertComment(
+              {
+                  client,
+                  context,
+                  prNumber,
+                  body,
+              },
+              hiddenHeader,
+          );
 };
