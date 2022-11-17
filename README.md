@@ -105,6 +105,7 @@ Thanks to:
 
 -   [ziishaned/jest-reporter-action](https://github.com/ziishaned/jest-reporter-action)
 -   [slavcodev/coverage-monitor-action](https://github.com/slavcodev/coverage-monitor-action)
+-   [ScaCap/code-coverage-assistant](https://github.com/ScaCap/code-coverage-assistant)
 
 ## License
 
