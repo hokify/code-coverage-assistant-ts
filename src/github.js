@@ -62,6 +62,8 @@ export const upsertComment = async ({
     });
     const last = existingComments.pop();
 
+    console.log(JSON.stringify(last, null, 5));
+
     await deleteComments({
         client,
         context,
