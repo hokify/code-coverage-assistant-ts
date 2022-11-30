@@ -136,7 +136,9 @@ const main = async () => {
               ),
         hiddenHeader: appName
             ? `<!-- ${appName}-code-coverage-assistant -->`
-            : `<!-- monorepo-code-coverage-assistant -->`,
+            : `<!-- monorepo-code-coverage-assistant ${
+                  monorepoBasePath.split("/")[1]
+              } -->`,
     });
 };
 
