@@ -37,7 +37,7 @@ const commentForMonorepo = (
     options,
 ) => {
     const { base } = options;
-    const html = lcovArrayForMonorepo.map((lcovObj) => {
+    const rows = lcovArrayForMonorepo.map((lcovObj) => {
         const baseLcov = lcovBaseArrayForMonorepo.find(
             (el) => el.packageName === lcovObj.packageName,
         );
@@ -64,25 +64,7 @@ const commentForMonorepo = (
                   pdiff.toFixed(2),
                   "%",
               )
-            : // "";
-              th(" N/A ");
-        /* let report = lcovObj.lcov;
-
-        if (baseLcov) {
-            const onlyInLcov = lcovObj.lcov.filter(comparer(baseLcov.lcov));
-            const onlyInBefore = baseLcov.lcov.filter(comparer(lcovObj.lcov));
-            report = onlyInBefore.concat(onlyInLcov);
-        } */
-
-        /* return `${table(
-            tbody(
-                tr(
-                    th(lcovObj.packageName),
-                    th(percentage(lcovObj.lcov).toFixed(2), "%"),
-                    pdiffHtml,
-                ),
-            ),
-        )} \n <br/>`; */
+            : th(" N/A ");
 
         return tr(
             th(lcovObj.packageName),
@@ -91,12 +73,11 @@ const commentForMonorepo = (
         );
     });
 
-    const html2 = table(tbody(html.join("")));
+    const html = table(tbody(rows.join("")));
 
     const title = `Coverage after merging into ${b(base)} <p></p>`;
 
-    // return fragment(title, html.join(""));
-    return fragment(title, html2);
+    return fragment(title, html);
 };
 
 /**
