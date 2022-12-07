@@ -116,6 +116,7 @@ const main = async () => {
         head: context.payload.pull_request.head.ref,
         base: context.payload.pull_request.base.ref,
         appName,
+        folder: monorepoBasePath.split("/")[1],
     };
 
     const lcov = !monorepoBasePath && (await parse(raw));

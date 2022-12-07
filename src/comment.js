@@ -36,7 +36,7 @@ const commentForMonorepo = (
     lcovBaseArrayForMonorepo,
     options,
 ) => {
-    const { base } = options;
+    const { base, folder } = options;
     const rows = lcovArrayForMonorepo.map((lcovObj) => {
         const baseLcov = lcovBaseArrayForMonorepo.find(
             (el) => el.packageName === lcovObj.packageName,
@@ -75,7 +75,9 @@ const commentForMonorepo = (
 
     const html = table(tbody(rows.join("")));
 
-    const title = `Coverage after merging into ${b(base)} <p></p>`;
+    const title = `Coverage for the ${b(folder)} folder after merging into ${b(
+        base,
+    )} <p></p>`;
 
     return fragment(title, html);
 };
