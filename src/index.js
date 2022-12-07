@@ -2,6 +2,7 @@ import fs, { promises } from "fs";
 import path from "path";
 import core from "@actions/core";
 import github from "@actions/github";
+import { getExecOutput } from "@actions/exec";
 import { parse } from "./lcov";
 import { diff, diffForMonorepo } from "./comment";
 import { upsertComment } from "./github";
@@ -100,7 +101,15 @@ const main = async () => {
 
     for (const file of lcovBaseArray) {
         if (file.path.includes(".info")) {
-            const rLcovBase = await promises.readFile(file.path, "utf8");
+            // const rLcovBase = await promises.readFile(file.path, "utf8");
+            const rLcovBase = (
+                await getExecOutput("git", [
+                    "show",
+                    `main:./${monorepoBasePath.split("/")[1]}/${
+                        file.name
+                    }/lcov-base.info`,
+                ])
+            ).stdout;
             const data = await parse(rLcovBase);
             lcovBaseArrayForMonorepo.push({
                 packageName: file.name,
