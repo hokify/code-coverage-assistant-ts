@@ -102,10 +102,11 @@ const main = async () => {
     for (const file of lcovBaseArray) {
         if (file.path.includes(".info")) {
             // const rLcovBase = await promises.readFile(file.path, "utf8");
+            console.log((await getExecOutput("git", ["status"])).stdout);
             const rLcovBase = (
                 await getExecOutput("git", [
                     "show",
-                    `main:./${monorepoBasePath.split("/")[1]}/${
+                    `origin/main:./${monorepoBasePath.split("/")[1]}/${
                         file.name
                     }/lcov-base.info`,
                 ])
