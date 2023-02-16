@@ -89,12 +89,19 @@ const main = async () => {
     const lcovBaseArrayForMonorepo = [];
     for (const file of lcovArray) {
         if (file.path.includes(".info")) {
-            const rLcove = await promises.readFile(file.path, "utf8");
-            const data = await parse(rLcove);
-            lcovArrayForMonorepo.push({
-                packageName: file.name,
-                lcov: data,
-            });
+            try {
+                const rLcove = await promises.readFile(file.path, "utf8");
+                const data = await parse(rLcove);
+                lcovArrayForMonorepo.push({
+                    packageName: file.name,
+                    lcov: data,
+                });
+            } catch (error) {
+                console.log(
+                    `The LCOV file from the project ${file.name} cannot be parsed. Either the file does not exist or it has been generated empty`,
+                );
+                throw error;
+            }
         }
     }
 
