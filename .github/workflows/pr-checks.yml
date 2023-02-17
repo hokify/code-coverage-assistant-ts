@@ -51,10 +51,10 @@ jobs:
             - name: All tests
               run: yarn test
             - name: Add coverage comment
-              uses: ScaCap/code-coverage-assistant@master
+              uses: hokify/code-coverage-assistant-ts@master
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
-                  lcov-file: ./coverage/lcov.info
+                  monorepo-base-path: ./
 
     build:
         name: Check build is committed

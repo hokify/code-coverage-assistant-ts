@@ -27,8 +27,6 @@ The possible inputs for this action are:
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | `github-token` (**Required**)       | Github token used for posting the comment. To use the key provided by the GitHub action runner, use `${{ secrets.GITHUB_TOKEN }}`.                                               |                        |
 | `monorepo-base-path` (**Optional**) | The location of your monrepo `packages` path                                                                                                                                     |                        |
-| `lcov-file` (**Optional**)          | The location of the lcov file to read the coverage report. `Needed only for single repos`                                                                                        | `./coverage/lcov.info` |
-| `lcov-base` (**Optional**)          | The location of the lcov file resulting from running the tests in the base branch. When this is set a diff of the coverage percentages is shown. `Needed only for single repos`. |                        |
 
 ## Examples
 
@@ -43,23 +41,12 @@ with:
 
 ![](/assets/example_monorepo.png)
 
-### Code coverage comment for single repo
-
-```yml
-uses: ScaCap/code-coverage-assistant@v1
-with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    lcov-file: "./app/coverage/lcov.info"
-```
-
-![](/assets/example_single_repo.png)
-
 ### Code coverage comment with diff
 
 ⚠️ &nbsp;Note: This config expects a `lcov-base.info` coverage file for base branch in your `.coverage` dir
 
 ```yml
-uses: ScaCap/code-coverage-assistant@v1
+uses: hokify/code-coverage-assistant-ts@v1
 with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
     monorepo-base-path: "./packages"
