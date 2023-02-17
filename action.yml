@@ -9,13 +9,7 @@ inputs:
         description: Github token
         required: true
     monorepo-base-path:
-        description: Location of your monorepo `packages` parent folder. If this is specified then we don't need `lcov-file` and `lcov-base` params
-        required: false
-    lcov-file:
-        description: The location of the lcov.info file. Applicable for single repo setup.
-        required: false
-    lcov-base:
-        description: The location of the lcov file for the base branch. Applicable for single repo setup.
+        description: Location of your monorepo `packages` parent folder.
         required: false
     app-name:
         description: App name to display on comment

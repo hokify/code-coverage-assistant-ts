@@ -14,8 +14,6 @@ const tag =
         return `<${name}${props}>${c.join("")}</${name}>`;
     };
 
-export const details = tag("details");
-export const summary = tag("summary");
 export const tr = tag("tr");
 export const td = tag("td");
 export const th = tag("th");
