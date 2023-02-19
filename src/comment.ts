@@ -1,5 +1,6 @@
-import { b, fragment, table, tbody, tr, th } from "./html";
-import { percentage } from "./lcov";
+import { b, fragment, table, tbody, tr, th } from "./html.js";
+import { percentage } from "./lcov.js";
+import { LvocList } from "./app.js";
 
 /**
  * Compares two arrays of objects and returns with unique lines update
@@ -13,16 +14,17 @@ const renderEmoji = (pdiff) => {
 };
 
 /**
- * Github comment for monorepo
+ * Diff in coverage percentage for monorepo
  * @param {Array<{packageName, lcovPath}>} lcovArrayForMonorepo
  * @param {{Array<{packageName, lcovBasePath}>}} lcovBaseArrayForMonorepo
  * @param {*} options
  */
-const commentForMonorepo = (
-    lcovArrayForMonorepo,
-    lcovBaseArrayForMonorepo,
-    options,
-) => {
+
+export const generateDiffForMonorepo = (
+    lcovArrayForMonorepo: LvocList,
+    lcovBaseArrayForMonorepo: LvocList,
+    options: { base: string; folder: string },
+): string => {
     const { base, folder } = options;
     const rows = lcovArrayForMonorepo.map((lcovObj) => {
         const baseLcov = lcovBaseArrayForMonorepo.find(
@@ -68,16 +70,3 @@ const commentForMonorepo = (
 
     return fragment(title, html);
 };
-
-/**
- * Diff in coverage percentage for monorepo
- * @param {Array<{packageName, lcovPath}>} lcovArrayForMonorepo
- * @param {{Array<{packageName, lcovBasePath}>}} lcovBaseArrayForMonorepo
- * @param {*} options
- */
-export const diffForMonorepo = (
-    lcovArrayForMonorepo,
-    lcovBaseArrayForMonorepo,
-    options,
-) =>
-    commentForMonorepo(lcovArrayForMonorepo, lcovBaseArrayForMonorepo, options);

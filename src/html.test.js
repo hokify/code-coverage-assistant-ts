@@ -10,7 +10,7 @@ import {
     a,
     span,
     fragment,
-} from "./html";
+} from "./html.js";
 
 test("html tags should return the correct html", () => {
     expect(details("foo", "bar")).toBe("<details>foobar</details>");

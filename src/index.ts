@@ -1,60 +1,54 @@
-// eslint-disable-next-line import/no-unused-modules
-import * as core from "@actions/core";
-import * as github from "@actions/github";
-import { diffForMonorepo } from "./comment";
-import { upsertComment } from "./github";
-import { assistent } from "./assistent";
+import { getInput, setFailed } from "@actions/core";
+import { context, getOctokit } from "@actions/github";
+import { S3Client } from "@aws-sdk/client-s3";
+import { generateReport, uploadLvocFiles } from "./app.js";
 
-const main = async () => {
-    const { context } = github;
+const token = getInput("github-token");
+const monorepoBasePath = getInput("monorepo-base-path");
+const s3Config = getInput("s3-config");
+const base = context.payload.pull_request?.base.ref;
 
-    const token = core.getInput("github-token");
-    const appName = core.getInput("app-name");
-    // Add base path for monorepo
-    const monorepoBasePath = core.getInput("monorepo-base-path");
-
-    if (!monorepoBasePath) {
-        // eslint-disable-next-line no-console
-        console.log(`No monorepo-base-path specified', exiting...`);
-
-        return;
+try {
+    if (!s3Config) {
+        throw new Error(`No s3 config specified!`);
     }
 
-    const { lcovArrayForMonorepo, lcovBaseArrayForMonorepo } = await assistent(
-        monorepoBasePath,
-    );
+    const s3ConfigParsed = JSON.parse(s3Config);
 
-    const options = {
-        repository: context.payload.repository?.full_name,
-        commit: context.payload.pull_request?.head.sha,
-        prefix: `${process.env.GITHUB_WORKSPACE}/`,
-        head: context.payload.pull_request?.head.ref,
-        base: context.payload.pull_request?.base.ref,
-        appName,
-        folder: monorepoBasePath.split("/")[1],
-    };
+    const s3Client = new S3Client(s3ConfigParsed);
 
-    const client = github.getOctokit(token);
+    if (!monorepoBasePath) {
+        throw new Error(`No monorepo-base-path specified!`);
+    }
 
-    await upsertComment({
-        client,
-        context,
-        prNumber: context.payload.pull_request?.number,
-        body: diffForMonorepo(
-            lcovArrayForMonorepo,
-            lcovBaseArrayForMonorepo,
-            options,
-        ),
-        hiddenHeader: appName
-            ? `<!-- ${appName}-code-coverage-assistant -->`
-            : `<!-- monorepo-code-coverage-assistant ${
-                  monorepoBasePath.split("/")[1]
-              } -->`,
-    });
-};
+    if (context.payload.pull_request?.merged) {
+        // upload new lcov base files to storage
+        await uploadLvocFiles(
+            s3Client,
+            s3ConfigParsed.Bucket,
+            monorepoBasePath,
+            base,
+        );
+    } else {
+        // generate diff report
+        if (!context.payload.pull_request?.number) {
+            throw new Error("no pull request number");
+        }
 
-main().catch((err) => {
+        const client = getOctokit(token);
+
+        await generateReport(
+            client,
+            s3Client,
+            s3ConfigParsed.Bucket,
+            monorepoBasePath,
+            context.repo,
+            context.payload.pull_request.number,
+            base,
+        );
+    }
+} catch (err: any) {
     // eslint-disable-next-line no-console
     console.log(err);
-    core.setFailed(err.message);
-});
+    setFailed(err.message);
+}

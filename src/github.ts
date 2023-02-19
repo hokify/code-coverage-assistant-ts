@@ -12,79 +12,86 @@
 // header on top, and will be used to identify which comments
 // to update/delete etc
 
+import { GitHub } from "@actions/github/lib/utils.js";
+import { Context } from "@actions/github/lib/context.js";
+
+export type OktokitClient = InstanceType<typeof GitHub>;
 const appendHiddenHeaderToComment = (body, hiddenHeader) => hiddenHeader + body;
 
-const listComments = async ({ client, context, prNumber, hiddenHeader }) => {
+const listComments = async (
+    client: OktokitClient,
+    repo: Context["repo"],
+    prNumber: number,
+    hiddenHeader: string,
+) => {
     const { data: existingComments } = await client.issues.listComments({
-        ...context.repo,
+        ...repo,
         issue_number: prNumber,
     });
 
-    return existingComments.filter(({ body }) => body.startsWith(hiddenHeader));
+    return existingComments.filter(({ body }) =>
+        body?.startsWith(hiddenHeader),
+    );
 };
 
-const insertComment = ({ client, context, prNumber, body }, hiddenHeader) =>
+const insertComment = (
+    client: OktokitClient,
+    repo: Context["repo"],
+    prNumber: number,
+    body: string,
+    hiddenHeader: string,
+) =>
     client.issues.createComment({
-        ...context.repo,
+        ...repo,
         issue_number: prNumber,
         body: appendHiddenHeaderToComment(body, hiddenHeader),
     });
 
-const updateComment = ({ client, context, body, commentId }, hiddenHeader) =>
+const updateComment = (
+    client: OktokitClient,
+    repo: Context["repo"],
+    body: string,
+    commentId: number,
+    hiddenHeader: string,
+) =>
     client.issues.updateComment({
-        ...context.repo,
+        ...repo,
         comment_id: commentId,
         body: appendHiddenHeaderToComment(body, hiddenHeader),
     });
 
-const deleteComments = ({ client, context, comments }) =>
+const deleteComments = (
+    client: OktokitClient,
+    repo: Context["repo"],
+    comments: { id: number }[],
+) =>
     Promise.all(
         comments.map(({ id }) =>
             client.issues.deleteComment({
-                ...context.repo,
+                ...repo,
                 comment_id: id,
             }),
         ),
     );
 
-export const upsertComment = async ({
-    client,
-    context,
-    prNumber,
-    body,
-    hiddenHeader,
-}) => {
-    const existingComments = await listComments({
+export const upsertComment = async (
+    client: OktokitClient,
+    repo: Context["repo"],
+    prNumber: number,
+    body: string,
+    hiddenHeader: string,
+) => {
+    const existingComments = await listComments(
         client,
-        context,
+        repo,
         prNumber,
         hiddenHeader,
-    });
+    );
     const last = existingComments.pop();
 
-    await deleteComments({
-        client,
-        context,
-        comments: existingComments,
-    });
+    await deleteComments(client, repo, existingComments);
 
     return last
-        ? updateComment(
-              {
-                  client,
-                  context,
-                  body,
-                  commentId: last.id,
-              },
-              hiddenHeader,
-          )
-        : insertComment(
-              {
-                  client,
-                  context,
-                  prNumber,
-                  body,
-              },
-              hiddenHeader,
-          );
+        ? updateComment(client, repo, body, last.id, hiddenHeader)
+        : insertComment(client, repo, prNumber, body, hiddenHeader);
 };

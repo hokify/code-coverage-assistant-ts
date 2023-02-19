@@ -1,8 +1,9 @@
 import lcov from "lcov-parse";
 
+export type LcovData = { lines: { hit: number; found: number } }[];
 // Parse lcov string into lcov data
 export const parse = (data) =>
-    new Promise((resolve, reject) => {
+    new Promise<LcovData>((resolve, reject) => {
         lcov(data, (err, res) => {
             if (err) {
                 reject(err);
@@ -14,7 +15,7 @@ export const parse = (data) =>
     });
 
 // Get the total coverage percentage from the lcov data.
-export const percentage = (lcovData) => {
+export const percentage = (lcovData: LcovData) => {
     let hit = 0;
     let found = 0;
     for (const entry of lcovData) {

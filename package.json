@@ -1,9 +1,12 @@
 {
-    "name": "code-coverage-assistant",
-    "version": "0.2.0",
-    "description": "Comments a pull request with the lcov code coverage",
+    "name": "code-coverage-assistant-ts",
+    "version": "1.0.0",
+    "description": "Comments a pull request with the lcov code coverage and uses s3 as backend storage",
     "license": "MIT",
-    "repository": "https://github.com/ScaCap/code-coverage-assistant",
+		"bin": {
+			"code-coverage-assistent": "bin/cli.js"
+		},
+    "repository": "https://github.com/hokify/code-coverage-assistant-ts",
     "keywords": [
         "actions",
         "monorepo",
@@ -11,18 +14,20 @@
         "comment",
         "message"
     ],
-    "main": "dist/index.js",
+    "main": "lib/cli.js",
     "scripts": {
-				"build": "tsc && ncc build lib/index.js",
-				"test": "jest --passWithNoTests --coverage",
+        "build": "tsc && ncc build lib/index.js",
+        "test": "jest --passWithNoTests --coverage",
         "local": "babel-node src/cli",
         "format": "prettier --write src/*.js src/**/*.js *.js",
         "eslint": "eslint --ext .js .",
         "pre-commit": "lint-staged"
     },
+	"type": "module",
     "dependencies": {
         "@actions/core": "^1.10.0",
         "@actions/github": "^4.0.0",
+        "@aws-sdk/client-s3": "^3.272.0",
         "lcov-parse": "^1.0.0"
     },
     "devDependencies": {
@@ -33,6 +38,7 @@
         "jest": "^29.2.2",
         "lint-staged": "^13.0.3",
         "prettier": "^2.8.4",
+        "ts-node": "^10.9.1",
         "typescript": "^4.9.5"
     },
     "jest": {

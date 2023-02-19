@@ -1,4 +1,4 @@
-import { parse, percentage } from "./lcov";
+import { parse, percentage } from "./lcov.js";
 
 test("parse should parse lcov strings correctly", async () => {
     const data = `
