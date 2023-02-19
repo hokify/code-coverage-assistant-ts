@@ -1,6 +1,6 @@
 # Code Coverage Assistant
 
-[![CI](https://github.com/peter-evans/create-pull-request/workflows/CI/badge.svg)](https://github.com/ScaCap/code-coverage-assistant/actions?query=workflow%3ACI)
+[![CI](https://github.com/peter-evans/create-pull-request/workflows/CI/badge.svg)](https://github.com/hokify/code-coverage-assistant-ts/actions?query=workflow%3ACI)
 
 > [GitHub Action](https://help.github.com/en/actions) to assist the pull request with code coverage stats
 
@@ -16,26 +16,28 @@ Just add this action to one of your [workflow files](https://docs.github.com/en/
 
 ```yml
 - name: Add coverage comment
-  uses: ScaCap/code-coverage-assistant@v1
+  uses: hokify/code-coverage-assistant-ts@v1
 ```
 
 ### Action inputs
 
 The possible inputs for this action are:
 
-| Parameter                           | Description                                                                                                                                                                      | Default                |
-| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `github-token` (**Required**)       | Github token used for posting the comment. To use the key provided by the GitHub action runner, use `${{ secrets.GITHUB_TOKEN }}`.                                               |                        |
-| `monorepo-base-path` (**Optional**) | The location of your monrepo `packages` path                                                                                                                                     |                        |
+| Parameter                           | Description                                                                                                                                                                   | Default                |
+|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------------- |
+| `github-token` (**Required**)       | Github token used for posting the comment. To use the key provided by the GitHub action runner, use `${{ secrets.GITHUB_TOKEN }}`.                                            |                        |
+| `monorepo-base-path` (**Required**) | The location of your monrepo `packages` path                                                                                                                                  |                        |
+| `s3-config` (**Required**)          | Configuration for uploading lcov files to s3. Json Encoded. e.g. '{ credentials: { accessKeyId: "", secretAccessKey: "" }, region: "", Bucket: "repository-code-coverage" }'  |                        |
 
 ## Examples
 
 ### Code coverage comment for monorepo
 
 ```yml
-uses: ScaCap/code-coverage-assistant@v1
+uses: hokify/code-coverage-assistant-ts@v1
 with:
     github-token: ${{ secrets.GITHUB_TOKEN }}
+    s3-config: '{ credentials: { accessKeyId: "", secretAccessKey: "" }, region: "", Bucket: "repository-code-coverage" }'
     monorepo-base-path: "./packages"
 ```
 
@@ -43,13 +45,32 @@ with:
 
 ### Code coverage comment with diff
 
-⚠️ &nbsp;Note: This config expects a `lcov-base.info` coverage file for base branch in your `.coverage` dir
+⚠️ &nbsp;Note: This config needs an additional github action when the PR is closed.
 
 ```yml
-uses: hokify/code-coverage-assistant-ts@v1
-with:
-    github-token: ${{ secrets.GITHUB_TOKEN }}
-    monorepo-base-path: "./packages"
+name: Upload Coverage Files
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - master
+
+env:
+  NODE_VERSION: '16'
+
+jobs:
+  upload-coverage:
+    if: ${{ github.event.pull_request.draft == false && github.event.pull_request.merged }}
+    runs-on: ubuntu-latest
+    name: Upload New Code Coverage Files
+    uses: hokify/code-coverage-assistant-ts@v1
+    with:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+      s3-config: ${{ secrets.CODECOV_S3_CONFIG }}
+      monorepo-base-path: './packages'
+
 ```
 
 ![](/assets/example_diff.png)
@@ -76,7 +97,7 @@ This action follows [semantic versioning](https://semver.org/).
 #### Creating a release
 
 -   Ensure master is up to date with all the changes for the next release
--   In the [GitHub releases page](https://github.com/ScaCap/code-coverage-assistant/releases), click "draft a new release"
+-   In the [GitHub releases page](https://github.com/hokify/code-coverage-assistant-ts/releases), click "draft a new release"
     -   Choose a tag matching this pattern: `vX.X.X`
     -   Choose `master` as the target
     -   Use the exact tag as the release title
