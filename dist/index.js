@@ -49172,6 +49172,324 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("zlib");
 
 /***/ }),
 
+/***/ 73893:
+/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __nccwpck_require__) => {
+
+
+// EXPORTS
+__nccwpck_require__.d(__webpack_exports__, {
+  "OE": () => (/* binding */ generateReport),
+  "GU": () => (/* binding */ uploadLvocFiles)
+});
+
+// UNUSED EXPORTS: getLcovFiles, retrieveLcovBaseFiles, retrieveLcovFiles
+
+;// CONCATENATED MODULE: external "node:fs"
+const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+;// CONCATENATED MODULE: external "node:path"
+const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+// EXTERNAL MODULE: ./node_modules/lcov-parse/lib/index.js
+var lib = __nccwpck_require__(7454);
+;// CONCATENATED MODULE: ./lib/lcov.js
+
+// Parse lcov string into lcov data
+const parse = (data) => new Promise((resolve, reject) => {
+    lib(data, (err, res) => {
+        if (err) {
+            reject(err);
+            return;
+        }
+        resolve(res);
+    });
+});
+// Get the total coverage percentage from the lcov data.
+const percentage = (lcovData) => {
+    let hit = 0;
+    let found = 0;
+    for (const entry of lcovData) {
+        hit += entry.lines.hit;
+        found += entry.lines.found;
+    }
+    return (hit / found) * 100;
+};
+//# sourceMappingURL=lcov.js.map
+;// CONCATENATED MODULE: ./lib/github.js
+// Modified from: https://github.com/slavcodev/coverage-monitor-action
+const appendHiddenHeaderToComment = (body, hiddenHeader) => hiddenHeader + body;
+const listComments = async (client, repo, prNumber, hiddenHeader) => {
+    const { data: existingComments } = await client.issues.listComments({
+        ...repo,
+        issue_number: prNumber,
+    });
+    return existingComments.filter(({ body }) => body?.startsWith(hiddenHeader));
+};
+const insertComment = (client, repo, prNumber, body, hiddenHeader) => client.issues.createComment({
+    ...repo,
+    issue_number: prNumber,
+    body: appendHiddenHeaderToComment(body, hiddenHeader),
+});
+const updateComment = (client, repo, body, commentId, hiddenHeader) => client.issues.updateComment({
+    ...repo,
+    comment_id: commentId,
+    body: appendHiddenHeaderToComment(body, hiddenHeader),
+});
+const deleteComments = (client, repo, comments) => Promise.all(comments.map(({ id }) => client.issues.deleteComment({
+    ...repo,
+    comment_id: id,
+})));
+const upsertComment = async (client, repo, prNumber, body, hiddenHeader) => {
+    const existingComments = await listComments(client, repo, prNumber, hiddenHeader);
+    const last = existingComments.pop();
+    await deleteComments(client, repo, existingComments);
+    return last
+        ? updateComment(client, repo, body, last.id, hiddenHeader)
+        : insertComment(client, repo, prNumber, body, hiddenHeader);
+};
+//# sourceMappingURL=github.js.map
+;// CONCATENATED MODULE: ./lib/html.js
+const tag = (name) => (...children) => {
+    const props = typeof children[0] === "object"
+        ? Object.keys(children[0])
+            .map((key) => ` ${key}='${children[0][key]}'`)
+            .join("")
+        : "";
+    const c = typeof children[0] === "string" ? children : children.slice(1);
+    return `<${name}${props}>${c.join("")}</${name}>\n`;
+};
+const tr = tag("tr");
+const td = tag("td");
+const th = tag("th");
+const b = tag("b");
+const table = tag("table");
+const tbody = tag("tbody");
+const a = tag("a");
+const span = tag("span");
+const fragment = (...children) => children.join("");
+//# sourceMappingURL=html.js.map
+;// CONCATENATED MODULE: ./lib/comment.js
+
+
+/**
+ * Compares two arrays of objects and returns with unique lines update
+ * @param {number} pdiff value from diff percentage
+ * @returns {string} emoji string for negative/positive pdiff
+ */
+const renderEmoji = (pdiff) => {
+    if (pdiff.toFixed(2) < 0)
+        return "❌";
+    return "✅";
+};
+/**
+ * Diff in coverage percentage for monorepo
+ * @param {Array<{packageName, lcovPath}>} lcovArrayForMonorepo
+ * @param {{Array<{packageName, lcovBasePath}>}} lcovBaseArrayForMonorepo
+ * @param {*} options
+ */
+const generateDiffForMonorepo = (lcovArrayForMonorepo, lcovBaseArrayForMonorepo, options) => {
+    const { base, folder } = options;
+    const rows = lcovArrayForMonorepo.map((lcovObj) => {
+        const baseLcov = lcovBaseArrayForMonorepo.find((el) => el.packageName === lcovObj.packageName);
+        const pbefore = baseLcov ? percentage(baseLcov.lcov) : 0;
+        const pafter = baseLcov ? percentage(lcovObj.lcov) : 0;
+        const pdiff = pafter - pbefore;
+        const plus = pdiff > 0 ? "+" : "";
+        let arrow = "";
+        if (pdiff < 0) {
+            arrow = "▾";
+        }
+        else if (pdiff > 0) {
+            arrow = "▴";
+        }
+        const pdiffHtml = baseLcov
+            ? th(renderEmoji(pdiff), " ", arrow, " ", plus, pdiff.toFixed(2), "%")
+            : th(" N/A ");
+        return tr(th(lcovObj.packageName), th(percentage(lcovObj.lcov).toFixed(2), "%"), pdiffHtml);
+    });
+    const html = table(tbody(rows.join("")));
+    const title = `Coverage for the ${b(folder)} folder after merging into ${b(base)} <p></p>`;
+    return fragment(title, html);
+};
+//# sourceMappingURL=comment.js.map
+// EXTERNAL MODULE: ./node_modules/@aws-sdk/client-s3/dist-cjs/index.js
+var dist_cjs = __nccwpck_require__(19250);
+;// CONCATENATED MODULE: ./lib/storage.js
+
+async function uploadFile(s3Client, bucket, file, body) {
+    await s3Client.send(new dist_cjs.PutObjectCommand({
+        Bucket: bucket,
+        Key: file,
+        Body: body,
+    }));
+}
+async function downloadFile(s3Client, bucket, file) {
+    // Get the object from the Amazon S3 bucket. It is returned as a ReadableStream.
+    const dataGet = await s3Client.send(new dist_cjs.GetObjectCommand({
+        Bucket: bucket,
+        Key: file,
+    }));
+    // Convert the ReadableStream to a string.
+    const body = await dataGet.Body?.transformToString();
+    return body;
+}
+//# sourceMappingURL=storage.js.map
+;// CONCATENATED MODULE: ./lib/app.js
+
+
+
+
+
+
+function getLcovFiles(dir, filelist) {
+    let fileArray = filelist || [];
+    (0,external_node_fs_namespaceObject.readdirSync)(dir).forEach((file) => {
+        fileArray = (0,external_node_fs_namespaceObject.statSync)(external_node_path_namespaceObject.join(dir, file)).isDirectory()
+            ? getLcovFiles(external_node_path_namespaceObject.join(dir, file), fileArray)
+            : fileArray
+                .filter((f) => f.path.includes("lcov.info"))
+                .concat({
+                name: dir.split("/")[1],
+                path: external_node_path_namespaceObject.join(dir, file),
+            });
+    });
+    return fileArray;
+}
+function filePath(base, monorepoBasePath, file) {
+    return `${base}/${monorepoBasePath}/${file.name}.lcov.info`;
+}
+async function retrieveLcovFiles(monorepoBasePath) {
+    const lcovArray = getLcovFiles(monorepoBasePath);
+    const lcovArrayForMonorepo = [];
+    for (const file of lcovArray) {
+        if (file.path.includes(".info")) {
+            try {
+                const rLcove = await external_node_fs_namespaceObject.promises.readFile(file.path, "utf8");
+                const data = await parse(rLcove);
+                lcovArrayForMonorepo.push({
+                    packageName: file.name,
+                    lcov: data,
+                });
+            }
+            catch (error) {
+                // eslint-disable-next-line no-console
+                console.log(`The LCOV file ${JSON.stringify(file)} cannot be parsed. Either the file does not exist or it has been generated empty`);
+                throw error;
+            }
+        }
+    }
+    return {
+        lcovArrayForMonorepo,
+    };
+}
+async function retrieveLcovBaseFiles(s3Client, bucket, monorepoBasePath, base, mainBase) {
+    const lcovArray = getLcovFiles(monorepoBasePath);
+    const lcovBaseArrayForMonorepo = [];
+    await Promise.all(lcovArray.map(async (file) => {
+        try {
+            const data = await downloadFile(s3Client, bucket, filePath(base, monorepoBasePath, file));
+            lcovBaseArrayForMonorepo.push({
+                packageName: file.name,
+                lcov: await parse(data),
+            });
+        }
+        catch (err) {
+            // eslint-disable-next-line no-console
+            console.log(err);
+            try {
+                if (base === mainBase) {
+                    throw err;
+                }
+                const data = await downloadFile(s3Client, bucket, filePath(base, monorepoBasePath, file));
+                lcovBaseArrayForMonorepo.push({
+                    packageName: file.name,
+                    lcov: await parse(data),
+                });
+            }
+            catch (secondTryErr) {
+                console.warn(`no base lcov file found for ${file.name}: ${secondTryErr}`);
+            }
+        }
+    }));
+    return {
+        lcovBaseArrayForMonorepo,
+    };
+}
+async function uploadLvocFiles(s3Client, bucket, monorepoBasePath, base) {
+    const lcovFiles = await getLcovFiles(monorepoBasePath);
+    // upload them
+    await Promise.all(lcovFiles.map(async (file) => {
+        const rLcove = await external_node_fs_namespaceObject.promises.readFile(file.path, "utf8");
+        // console.log("file", file.name, file.path, rLcove.length);
+        await uploadFile(s3Client, bucket, filePath(base, monorepoBasePath, file), rLcove);
+    }));
+}
+async function generateReport(client, s3Client, bucket, monorepoBasePath, repo, prNumber, base, mainBase = "master") {
+    const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] = await Promise.all([
+        retrieveLcovFiles(monorepoBasePath),
+        retrieveLcovBaseFiles(s3Client, bucket, monorepoBasePath, base, mainBase),
+    ]);
+    const options = {
+        // repository: context.payload.repository?.full_name,
+        // commit: context.payload.pull_request?.head.sha,
+        // prefix: `${process.env.GITHUB_WORKSPACE}/`,
+        // head: context.payload.pull_request?.head.ref,
+        base,
+        folder: monorepoBasePath.split("/")[1],
+    };
+    await upsertComment(client, repo, prNumber, generateDiffForMonorepo(lcovArrayForMonorepo, lcovBaseArrayForMonorepo, options), `<!-- monorepo-code-coverage-assistant--${monorepoBasePath.split("/")[1]} -->`);
+}
+//# sourceMappingURL=app.js.map
+
+/***/ }),
+
+/***/ 44554:
+/***/ ((__webpack_module__, __unused_webpack___webpack_exports__, __nccwpck_require__) => {
+
+__nccwpck_require__.a(__webpack_module__, async (__webpack_handle_async_dependencies__, __webpack_async_result__) => { try {
+/* harmony import */ var _actions_core__WEBPACK_IMPORTED_MODULE_0__ = __nccwpck_require__(42186);
+/* harmony import */ var _actions_github__WEBPACK_IMPORTED_MODULE_1__ = __nccwpck_require__(95438);
+/* harmony import */ var _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_3__ = __nccwpck_require__(19250);
+/* harmony import */ var _app_js__WEBPACK_IMPORTED_MODULE_2__ = __nccwpck_require__(73893);
+
+
+
+
+const token = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("github-token");
+const monorepoBasePath = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("monorepo-base-path");
+const s3Config = (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.getInput)("s3-config");
+const base = _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request?.base.ref;
+try {
+    if (!s3Config) {
+        throw new Error(`No s3 config specified!`);
+    }
+    const s3ConfigParsed = JSON.parse(s3Config);
+    const s3Client = new _aws_sdk_client_s3__WEBPACK_IMPORTED_MODULE_3__.S3Client(s3ConfigParsed);
+    if (!monorepoBasePath) {
+        throw new Error(`No monorepo-base-path specified!`);
+    }
+    if (_actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request?.merged) {
+        // upload new lcov base files to storage
+        await (0,_app_js__WEBPACK_IMPORTED_MODULE_2__/* .uploadLvocFiles */ .GU)(s3Client, s3ConfigParsed.Bucket, monorepoBasePath, base);
+    }
+    else {
+        // generate diff report
+        if (!_actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request?.number) {
+            throw new Error("no pull request number");
+        }
+        const client = (0,_actions_github__WEBPACK_IMPORTED_MODULE_1__.getOctokit)(token);
+        await (0,_app_js__WEBPACK_IMPORTED_MODULE_2__/* .generateReport */ .OE)(client, s3Client, s3ConfigParsed.Bucket, monorepoBasePath, _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.repo, _actions_github__WEBPACK_IMPORTED_MODULE_1__.context.payload.pull_request.number, base);
+    }
+}
+catch (err) {
+    // eslint-disable-next-line no-console
+    console.log(err);
+    (0,_actions_core__WEBPACK_IMPORTED_MODULE_0__.setFailed)(err.message);
+}
+//# sourceMappingURL=index.js.map
+__webpack_async_result__();
+} catch(e) { __webpack_async_result__(e); } }, 1);
+
+/***/ }),
+
 /***/ 50677:
 /***/ ((module) => {
 
@@ -49247,318 +49565,101 @@ module.exports = JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45,46],"valid"]
 /******/ }
 /******/ 
 /************************************************************************/
+/******/ /* webpack/runtime/async module */
+/******/ (() => {
+/******/ 	var webpackQueues = typeof Symbol === "function" ? Symbol("webpack queues") : "__webpack_queues__";
+/******/ 	var webpackExports = typeof Symbol === "function" ? Symbol("webpack exports") : "__webpack_exports__";
+/******/ 	var webpackError = typeof Symbol === "function" ? Symbol("webpack error") : "__webpack_error__";
+/******/ 	var resolveQueue = (queue) => {
+/******/ 		if(queue && !queue.d) {
+/******/ 			queue.d = 1;
+/******/ 			queue.forEach((fn) => (fn.r--));
+/******/ 			queue.forEach((fn) => (fn.r-- ? fn.r++ : fn()));
+/******/ 		}
+/******/ 	}
+/******/ 	var wrapDeps = (deps) => (deps.map((dep) => {
+/******/ 		if(dep !== null && typeof dep === "object") {
+/******/ 			if(dep[webpackQueues]) return dep;
+/******/ 			if(dep.then) {
+/******/ 				var queue = [];
+/******/ 				queue.d = 0;
+/******/ 				dep.then((r) => {
+/******/ 					obj[webpackExports] = r;
+/******/ 					resolveQueue(queue);
+/******/ 				}, (e) => {
+/******/ 					obj[webpackError] = e;
+/******/ 					resolveQueue(queue);
+/******/ 				});
+/******/ 				var obj = {};
+/******/ 				obj[webpackQueues] = (fn) => (fn(queue));
+/******/ 				return obj;
+/******/ 			}
+/******/ 		}
+/******/ 		var ret = {};
+/******/ 		ret[webpackQueues] = x => {};
+/******/ 		ret[webpackExports] = dep;
+/******/ 		return ret;
+/******/ 	}));
+/******/ 	__nccwpck_require__.a = (module, body, hasAwait) => {
+/******/ 		var queue;
+/******/ 		hasAwait && ((queue = []).d = 1);
+/******/ 		var depQueues = new Set();
+/******/ 		var exports = module.exports;
+/******/ 		var currentDeps;
+/******/ 		var outerResolve;
+/******/ 		var reject;
+/******/ 		var promise = new Promise((resolve, rej) => {
+/******/ 			reject = rej;
+/******/ 			outerResolve = resolve;
+/******/ 		});
+/******/ 		promise[webpackExports] = exports;
+/******/ 		promise[webpackQueues] = (fn) => (queue && fn(queue), depQueues.forEach(fn), promise["catch"](x => {}));
+/******/ 		module.exports = promise;
+/******/ 		body((deps) => {
+/******/ 			currentDeps = wrapDeps(deps);
+/******/ 			var fn;
+/******/ 			var getResult = () => (currentDeps.map((d) => {
+/******/ 				if(d[webpackError]) throw d[webpackError];
+/******/ 				return d[webpackExports];
+/******/ 			}))
+/******/ 			var promise = new Promise((resolve) => {
+/******/ 				fn = () => (resolve(getResult));
+/******/ 				fn.r = 0;
+/******/ 				var fnQueue = (q) => (q !== queue && !depQueues.has(q) && (depQueues.add(q), q && !q.d && (fn.r++, q.push(fn))));
+/******/ 				currentDeps.map((dep) => (dep[webpackQueues](fnQueue)));
+/******/ 			});
+/******/ 			return fn.r ? promise : getResult();
+/******/ 		}, (err) => ((err ? reject(promise[webpackError] = err) : outerResolve(exports)), resolveQueue(queue)));
+/******/ 		queue && (queue.d = 0);
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/define property getters */
+/******/ (() => {
+/******/ 	// define getter functions for harmony exports
+/******/ 	__nccwpck_require__.d = (exports, definition) => {
+/******/ 		for(var key in definition) {
+/******/ 			if(__nccwpck_require__.o(definition, key) && !__nccwpck_require__.o(exports, key)) {
+/******/ 				Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 			}
+/******/ 		}
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/hasOwnProperty shorthand */
+/******/ (() => {
+/******/ 	__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ })();
+/******/ 
 /******/ /* webpack/runtime/compat */
 /******/ 
 /******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
 /******/ 
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
-(() => {
-
-// EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
-var core = __nccwpck_require__(42186);
-// EXTERNAL MODULE: ./node_modules/@actions/github/lib/github.js
-var github = __nccwpck_require__(95438);
-// EXTERNAL MODULE: ./node_modules/@aws-sdk/client-s3/dist-cjs/index.js
-var dist_cjs = __nccwpck_require__(19250);
-;// CONCATENATED MODULE: external "node:fs"
-const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
-;// CONCATENATED MODULE: external "node:path"
-const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
-// EXTERNAL MODULE: ./node_modules/lcov-parse/lib/index.js
-var lib = __nccwpck_require__(7454);
-;// CONCATENATED MODULE: ./lib/lcov.js
-
-// Parse lcov string into lcov data
-const parse = (data) => new Promise((resolve, reject) => {
-    lib(data, (err, res) => {
-        if (err) {
-            reject(err);
-            return;
-        }
-        resolve(res);
-    });
-});
-// Get the total coverage percentage from the lcov data.
-const percentage = (lcovData) => {
-    let hit = 0;
-    let found = 0;
-    for (const entry of lcovData) {
-        hit += entry.lines.hit;
-        found += entry.lines.found;
-    }
-    return (hit / found) * 100;
-};
-//# sourceMappingURL=lcov.js.map
-;// CONCATENATED MODULE: ./lib/github.js
-// Modified from: https://github.com/slavcodev/coverage-monitor-action
-const appendHiddenHeaderToComment = (body, hiddenHeader) => hiddenHeader + body;
-const listComments = async (client, repo, prNumber, hiddenHeader) => {
-    const { data: existingComments } = await client.issues.listComments({
-        ...repo,
-        issue_number: prNumber,
-    });
-    return existingComments.filter(({ body }) => body?.startsWith(hiddenHeader));
-};
-const insertComment = (client, repo, prNumber, body, hiddenHeader) => client.issues.createComment({
-    ...repo,
-    issue_number: prNumber,
-    body: appendHiddenHeaderToComment(body, hiddenHeader),
-});
-const updateComment = (client, repo, body, commentId, hiddenHeader) => client.issues.updateComment({
-    ...repo,
-    comment_id: commentId,
-    body: appendHiddenHeaderToComment(body, hiddenHeader),
-});
-const deleteComments = (client, repo, comments) => Promise.all(comments.map(({ id }) => client.issues.deleteComment({
-    ...repo,
-    comment_id: id,
-})));
-const upsertComment = async (client, repo, prNumber, body, hiddenHeader) => {
-    const existingComments = await listComments(client, repo, prNumber, hiddenHeader);
-    console.log("existingComments", existingComments);
-    const last = existingComments.pop();
-    await deleteComments(client, repo, existingComments);
-    return last
-        ? updateComment(client, repo, body, last.id, hiddenHeader)
-        : insertComment(client, repo, prNumber, body, hiddenHeader);
-};
-//# sourceMappingURL=github.js.map
-;// CONCATENATED MODULE: ./lib/html.js
-const tag = (name) => (...children) => {
-    const props = typeof children[0] === "object"
-        ? Object.keys(children[0])
-            .map((key) => ` ${key}='${children[0][key]}'`)
-            .join("")
-        : "";
-    const c = typeof children[0] === "string" ? children : children.slice(1);
-    return `<${name}${props}>${c.join("")}</${name}>\n`;
-};
-const tr = tag("tr");
-const td = tag("td");
-const th = tag("th");
-const b = tag("b");
-const table = tag("table");
-const tbody = tag("tbody");
-const a = tag("a");
-const span = tag("span");
-const fragment = (...children) => children.join("");
-//# sourceMappingURL=html.js.map
-;// CONCATENATED MODULE: ./lib/comment.js
-
-
-/**
- * Compares two arrays of objects and returns with unique lines update
- * @param {number} pdiff value from diff percentage
- * @returns {string} emoji string for negative/positive pdiff
- */
-const renderEmoji = (pdiff) => {
-    if (pdiff.toFixed(2) < 0)
-        return "❌";
-    return "✅";
-};
-/**
- * Diff in coverage percentage for monorepo
- * @param {Array<{packageName, lcovPath}>} lcovArrayForMonorepo
- * @param {{Array<{packageName, lcovBasePath}>}} lcovBaseArrayForMonorepo
- * @param {*} options
- */
-const generateDiffForMonorepo = (lcovArrayForMonorepo, lcovBaseArrayForMonorepo, options) => {
-    const { base, folder } = options;
-    const rows = lcovArrayForMonorepo.map((lcovObj) => {
-        const baseLcov = lcovBaseArrayForMonorepo.find((el) => el.packageName === lcovObj.packageName);
-        const pbefore = baseLcov ? percentage(baseLcov.lcov) : 0;
-        const pafter = baseLcov ? percentage(lcovObj.lcov) : 0;
-        const pdiff = pafter - pbefore;
-        const plus = pdiff > 0 ? "+" : "";
-        let arrow = "";
-        if (pdiff < 0) {
-            arrow = "▾";
-        }
-        else if (pdiff > 0) {
-            arrow = "▴";
-        }
-        const pdiffHtml = baseLcov
-            ? th(renderEmoji(pdiff), " ", arrow, " ", plus, pdiff.toFixed(2), "%")
-            : th(" N/A ");
-        return tr(th(lcovObj.packageName), th(percentage(lcovObj.lcov).toFixed(2), "%"), pdiffHtml);
-    });
-    const html = table(tbody(rows.join("")));
-    const title = `Coverage for the ${b(folder)} folder after merging into ${b(base)} <p></p>`;
-    return fragment(title, html);
-};
-//# sourceMappingURL=comment.js.map
-;// CONCATENATED MODULE: ./lib/storage.js
-
-async function uploadFile(s3Client, bucket, file, body) {
-    await s3Client.send(new dist_cjs.PutObjectCommand({
-        Bucket: bucket,
-        Key: file,
-        Body: body,
-    }));
-}
-async function downloadFile(s3Client, bucket, file) {
-    // Get the object from the Amazon S3 bucket. It is returned as a ReadableStream.
-    const dataGet = await s3Client.send(new dist_cjs.GetObjectCommand({
-        Bucket: bucket,
-        Key: file,
-    }));
-    // Convert the ReadableStream to a string.
-    const body = await dataGet.Body?.transformToString();
-    return body;
-}
-//# sourceMappingURL=storage.js.map
-;// CONCATENATED MODULE: ./lib/app.js
-
-
-
-
-
-
-function getLcovFiles(dir, filelist) {
-    let fileArray = filelist || [];
-    (0,external_node_fs_namespaceObject.readdirSync)(dir).forEach((file) => {
-        fileArray = (0,external_node_fs_namespaceObject.statSync)(external_node_path_namespaceObject.join(dir, file)).isDirectory()
-            ? getLcovFiles(external_node_path_namespaceObject.join(dir, file), fileArray)
-            : fileArray
-                .filter((f) => f.path.includes("lcov.info"))
-                .concat({
-                name: dir.split("/")[1],
-                path: external_node_path_namespaceObject.join(dir, file),
-            });
-    });
-    return fileArray;
-}
-function filePath(base, file) {
-    return `${base}/${file.name}.lcov.info`;
-}
-async function retrieveLcovFiles(monorepoBasePath) {
-    const lcovArray = getLcovFiles(monorepoBasePath);
-    const lcovArrayForMonorepo = [];
-    for (const file of lcovArray) {
-        if (file.path.includes(".info")) {
-            try {
-                const rLcove = await external_node_fs_namespaceObject.promises.readFile(file.path, "utf8");
-                const data = await parse(rLcove);
-                lcovArrayForMonorepo.push({
-                    packageName: file.name,
-                    lcov: data,
-                });
-            }
-            catch (error) {
-                // eslint-disable-next-line no-console
-                console.log(`The LCOV file ${JSON.stringify(file)} cannot be parsed. Either the file does not exist or it has been generated empty`);
-                throw error;
-            }
-        }
-    }
-    return {
-        lcovArrayForMonorepo,
-    };
-}
-async function retrieveLcovBaseFiles(s3Client, bucket, monorepoBasePath, base, mainBase) {
-    const lcovArray = getLcovFiles(monorepoBasePath);
-    const lcovBaseArrayForMonorepo = [];
-    await Promise.all(lcovArray.map(async (file) => {
-        try {
-            const data = await downloadFile(s3Client, bucket, filePath(base, file));
-            lcovBaseArrayForMonorepo.push({
-                packageName: file.name,
-                lcov: await parse(data),
-            });
-        }
-        catch (err) {
-            console.log(err);
-            try {
-                if (base === mainBase) {
-                    throw err;
-                }
-                const data = await downloadFile(s3Client, bucket, filePath(base, file));
-                lcovBaseArrayForMonorepo.push({
-                    packageName: file.name,
-                    lcov: await parse(data),
-                });
-            }
-            catch (secondTryErr) {
-                console.warn(`no base lcov file found for ${file.name}: ${secondTryErr}`);
-            }
-        }
-    }));
-    return {
-        lcovBaseArrayForMonorepo,
-    };
-}
-async function uploadLvocFiles(s3Client, bucket, monorepoBasePath, base) {
-    const lcovFiles = await getLcovFiles(monorepoBasePath);
-    // upload them
-    await Promise.all(lcovFiles.map(async (file) => {
-        const rLcove = await external_node_fs_namespaceObject.promises.readFile(file.path, "utf8");
-        console.log("file", file.name, file.path, rLcove.length);
-        await uploadFile(s3Client, bucket, filePath(base, file), rLcove);
-    }));
-}
-async function generateReport(client, s3Client, bucket, monorepoBasePath, repo, prNumber, base, mainBase = "master") {
-    const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] = await Promise.all([
-        retrieveLcovFiles(monorepoBasePath),
-        retrieveLcovBaseFiles(s3Client, bucket, monorepoBasePath, base, mainBase),
-    ]);
-    const options = {
-        // repository: context.payload.repository?.full_name,
-        // commit: context.payload.pull_request?.head.sha,
-        // prefix: `${process.env.GITHUB_WORKSPACE}/`,
-        // head: context.payload.pull_request?.head.ref,
-        base,
-        folder: monorepoBasePath.split("/")[1],
-    };
-    await upsertComment(client, repo, prNumber, generateDiffForMonorepo(lcovArrayForMonorepo, lcovBaseArrayForMonorepo, options), `<!-- monorepo-code-coverage-assistant--${monorepoBasePath.split("/")[1]} -->`);
-}
-//# sourceMappingURL=app.js.map
-;// CONCATENATED MODULE: ./lib/index.js
-// eslint-disable-next-line import/no-unused-modules
-
-
-
-
-const main = async () => {
-    const token = core.getInput("github-token");
-    const monorepoBasePath = core.getInput("monorepo-base-path");
-    const s3Config = core.getInput("s3-config");
-    const base = github.context.payload.pull_request?.base.ref;
-    if (!s3Config) {
-        throw new Error(`No s3 config specified!`);
-    }
-    const s3ConfigParsed = JSON.parse(s3Config);
-    /*
-        credentials: {
-            accessKeyId: "AKIA42GN6LOCXTWQNBXA",
-            secretAccessKey: "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",
-        },
-        region: "eu-north-1",
-        Bucket: "repository-code-coverage",
-    }; */
-    const s3Client = new dist_cjs.S3Client(s3ConfigParsed);
-    if (!monorepoBasePath) {
-        throw new Error(`No monorepo-base-path specified!`);
-    }
-    if (github.context.payload.pull_request?.merged) {
-        // upload new lcov base files to storage
-        await uploadLvocFiles(s3Client, s3ConfigParsed.Bucket, monorepoBasePath, base);
-    }
-    else {
-        // generate diff report
-        if (!github.context.payload.pull_request?.number) {
-            throw new Error("no pull request number");
-        }
-        const client = (0,github.getOctokit)(token);
-        await generateReport(client, s3Client, s3ConfigParsed.Bucket, monorepoBasePath, github.context.repo, github.context.payload.pull_request.number, base);
-    }
-};
-main().catch((err) => {
-    // eslint-disable-next-line no-console
-    console.log(err);
-    core.setFailed(err.message);
-});
-//# sourceMappingURL=index.js.map
-})();
-
+/******/ 
+/******/ // startup
+/******/ // Load entry module and return exports
+/******/ // This entry module used 'module' so it can't be inlined
+/******/ var __webpack_exports__ = __nccwpck_require__(44554);
+/******/ __webpack_exports__ = await __webpack_exports__;
+/******/ 

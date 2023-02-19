@@ -32,8 +32,12 @@ export function getLcovFiles(dir: string, filelist?: FileList) {
     return fileArray;
 }
 
-function filePath(base: string, file: { name: string }) {
-    return `${base}/${file.name}.lcov.info`;
+function filePath(
+    base: string,
+    monorepoBasePath: string,
+    file: { name: string },
+) {
+    return `${base}/${monorepoBasePath}/${file.name}.lcov.info`;
 }
 
 export async function retrieveLcovFiles(monorepoBasePath: string) {
@@ -82,13 +86,14 @@ export async function retrieveLcovBaseFiles(
                 const data = await downloadFile(
                     s3Client,
                     bucket,
-                    filePath(base, file),
+                    filePath(base, monorepoBasePath, file),
                 );
                 lcovBaseArrayForMonorepo.push({
                     packageName: file.name,
                     lcov: await parse(data),
                 });
             } catch (err) {
+                // eslint-disable-next-line no-console
                 console.log(err);
                 try {
                     if (base === mainBase) {
@@ -97,7 +102,7 @@ export async function retrieveLcovBaseFiles(
                     const data = await downloadFile(
                         s3Client,
                         bucket,
-                        filePath(base, file),
+                        filePath(base, monorepoBasePath, file),
                     );
                     lcovBaseArrayForMonorepo.push({
                         packageName: file.name,
@@ -129,8 +134,13 @@ export async function uploadLvocFiles(
     await Promise.all(
         lcovFiles.map(async (file) => {
             const rLcove = await promises.readFile(file.path, "utf8");
-            console.log("file", file.name, file.path, rLcove.length);
-            await uploadFile(s3Client, bucket, filePath(base, file), rLcove);
+            // console.log("file", file.name, file.path, rLcove.length);
+            await uploadFile(
+                s3Client,
+                bucket,
+                filePath(base, monorepoBasePath, file),
+                rLcove,
+            );
         }),
     );
 }
