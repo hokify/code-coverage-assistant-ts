@@ -1,6 +1,6 @@
-name: Code Coverage Report
-description: Comments a pull request with the code coverage for mono repo and single repo
-author: "Eesh Tyagi, Marina, John Hannagan"
+name: Code Coverage Report with S3 Backend
+description: Comments a pull request with the code coverage for mono repo and single repo and stores lcov files inside a s3 repository
+author: "Simon Tretter, based on work of Eesh Tyagi, Marina and John Hannagan"
 branding:
     icon: check-square
     color: green
@@ -10,10 +10,10 @@ inputs:
         required: true
     monorepo-base-path:
         description: Location of your monorepo `packages` parent folder.
-        required: false
-    app-name:
-        description: App name to display on comment
-        required: false
+        required: true
+    s3-config:
+        description: 's3 config for lcov file storage, json encoded { credentials: { accessKeyId: "", secretAccessKey: "", }, region: "", Bucket: "repository-code-coverage" }'
+        required: true
 runs:
     using: node16
     main: dist/main.js
