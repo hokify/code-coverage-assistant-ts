@@ -4,7 +4,7 @@
     "description": "Comments a pull request with the lcov code coverage and uses s3 as backend storage",
     "license": "MIT",
 		"bin": {
-			"code-coverage-assistent": "bin/cli.js"
+			"code-coverage-assistent-ts": "bin/cli.js"
 		},
     "repository": "https://github.com/hokify/code-coverage-assistant-ts",
     "keywords": [
