@@ -1,5 +1,8 @@
 name: "build-and-pack"
-on: pull_request
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   build:
@@ -7,15 +10,14 @@ jobs:
       PACKED_JS_PATH: 'dist/index.js'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
           node-version: 16
-      - name: Extract branch name
-        id: extractBranch
-        shell: bash
-        run: echo "##\[set-output name=branch;\]$(echo ${GITHUB_REF#refs/heads/})"
       - name: Install dependencies
         run: npm install
       - name: Build
@@ -25,19 +27,9 @@ jobs:
       - name: Check packed JS changes
         id: packedJsStatus
         run: echo ::set-output name=changes::$(git status ${{ env.PACKED_JS_PATH }} --porcelain)
-      - name: Commit packed JS
-        id: commitPackedJs
-        if: steps.packedJsStatus.outputs.changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add ${{ env.PACKED_JS_PATH }}
-          git commit -m "Pack with dependencies to ${{ env.PACKED_JS_PATH }}"
-      - name: Push packed JS
-        if: steps.commitPackedJs.outcome == 'success'
-        uses: ad-m/github-push-action@master
+      - name: Commit new build output
+        uses: EndBug/add-and-commit@v9.1.1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          tags: true
-          force: true
-          branch: ${{ steps.extractBranch.outputs.branch }}
+          add: ${{ env.PACKED_JS_PATH }}
+          message: 'chore: update ${{ env.PACKED_JS_PATH }}'
+          default_author: github_actions

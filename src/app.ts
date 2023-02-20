@@ -63,12 +63,23 @@ export async function retrieveLcovFiles(monorepoBasePath: string) {
                     lcov: data,
                 });
             } catch (error) {
-                // eslint-disable-next-line no-console
-                console.log(
-                    `The LCOV file ${JSON.stringify(
-                        file,
-                    )} cannot be parsed. Either the file does not exist or it has been generated empty`,
-                );
+                try {
+                    const stats = statSync(file.path);
+                    console.error(
+                        `The LCOV file ${JSON.stringify(
+                            file,
+                        )} cannot be parsed. The file may be generated empty, filesize in bytes: ${
+                            stats.size
+                        }`,
+                    );
+                } catch (err) {
+                    console.error(
+                        `The LCOV file ${JSON.stringify(
+                            file,
+                        )} cannot be parsed. The file does not exist?`,
+                    );
+                }
+
                 throw error;
             }
         }
@@ -81,7 +92,7 @@ export async function retrieveLcovFiles(monorepoBasePath: string) {
 
 export async function retrieveLcovBaseFiles(
     s3Client: S3Client,
-    bucket: string,
+    s3Bucket: string,
     repo: Context["repo"],
     monorepoBasePath: string,
     base: string,
@@ -93,9 +104,14 @@ export async function retrieveLcovBaseFiles(
     await Promise.all(
         lcovArray.map(async (file) => {
             try {
+                // eslint-disable-next-line no-console
+                console.info(
+                    "getting base file from",
+                    filePath(repo, base, undefined, monorepoBasePath, file),
+                );
                 const data = await downloadFile(
                     s3Client,
-                    bucket,
+                    s3Bucket,
                     filePath(repo, base, undefined, monorepoBasePath, file),
                 );
                 lcovBaseArrayForMonorepo.push({
@@ -111,8 +127,14 @@ export async function retrieveLcovBaseFiles(
                     }
                     const data = await downloadFile(
                         s3Client,
-                        bucket,
-                        filePath(repo, base, undefined, monorepoBasePath, file),
+                        s3Bucket,
+                        filePath(
+                            repo,
+                            mainBase,
+                            undefined,
+                            monorepoBasePath,
+                            file,
+                        ),
                     );
                     lcovBaseArrayForMonorepo.push({
                         packageName: file.name,
