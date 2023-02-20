@@ -13,13 +13,21 @@ const s3Config = getInput("s3-config");
 const base = context.payload.pull_request?.base.ref;
 
 try {
-    const s3ConfigParsed:
+    let s3ConfigParsed:
         | {
               credentials: { accessKeyId: string; secretAccessKey: string };
               Bucket: string;
               region: string;
           }
-        | undefined = s3Config && JSON.parse(s3Config);
+        | undefined;
+
+    try {
+        s3ConfigParsed = s3Config && JSON.parse(s3Config);
+    } catch (err) {
+        // eslint-disable-next-line no-console
+        console.log("s3Config", s3Config);
+        throw new Error(`failed parsing s3 config json: ${err}`);
+    }
 
     const s3Client = s3ConfigParsed && new S3Client(s3ConfigParsed);
 
