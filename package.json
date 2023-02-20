@@ -16,7 +16,8 @@
     ],
     "main": "lib/cli.js",
     "scripts": {
-        "build": "tsc && ncc build lib/index.js",
+        "build": "tsc",
+				"pack":  "ncc build -m --license licenses.txt lib/index.js",
         "test": "jest --passWithNoTests --coverage",
         "local": "babel-node src/cli",
         "format": "prettier --write src/*.js src/**/*.js *.js",

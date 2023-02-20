@@ -23,11 +23,11 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: "**/node_modules"
-                  key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+                  key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
             - name: Install packages
-              run: yarn
+              run: npm install
             - name: ESLint
-              run: yarn eslint
+              run: npm run eslint
 
     tests:
         name: Unit tests
@@ -45,39 +45,13 @@ jobs:
               uses: actions/cache@v2
               with:
                   path: "**/node_modules"
-                  key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+                  key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
             - name: Install packages
-              run: yarn
+              run: npm install
             - name: All tests
-              run: yarn test
+              run: npm run test
             - name: Add coverage comment
               uses: hokify/code-coverage-assistant-ts@master
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   monorepo-base-path: ./
-
-    build:
-        name: Check build is committed
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout repo
-              uses: actions/checkout@v2
-              with:
-                  fetch-depth: 0
-            - name: Setup node
-              uses: actions/setup-node@v1
-              with:
-                  node-version: 16
-            - name: Restore node_modules cache
-              uses: actions/cache@v2
-              with:
-                  path: "**/node_modules"
-                  key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-            - name: Install packages
-              run: yarn
-            - name: Build
-              run: yarn build
-            - name: Ensure that the committed dist matches the build
-              # See if there are any diffs in the dist file. Grep returns an error
-              # when there are no changes, so we flip the output
-              run: (git diff --name-only | grep dist/main.js || exit 0 && exit 1)

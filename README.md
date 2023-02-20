@@ -27,7 +27,7 @@ The possible inputs for this action are:
 |-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------------- |
 | `github-token` (**Required**)       | Github token used for posting the comment. To use the key provided by the GitHub action runner, use `${{ secrets.GITHUB_TOKEN }}`.                                            |                        |
 | `monorepo-base-path` (**Required**) | The location of your monrepo `packages` path                                                                                                                                  |                        |
-| `s3-config` (**Required**)          | Configuration for uploading lcov files to s3. Json Encoded. e.g. '{ credentials: { accessKeyId: "", secretAccessKey: "" }, region: "", Bucket: "repository-code-coverage" }'  |                        |
+| `s3-config`          | Configuration for uploading lcov files to s3. Json Encoded. e.g. '{ credentials: { accessKeyId: "", secretAccessKey: "" }, region: "", Bucket: "repository-code-coverage" }'  |                        |
 
 ## Examples
 
@@ -46,6 +46,7 @@ with:
 ### Code coverage comment with diff
 
 ⚠️ &nbsp;Note: This config needs an additional github action when the PR is closed.
+And you need to set `s3-config` parameter!
 
 ```yml
 name: Upload Coverage Files

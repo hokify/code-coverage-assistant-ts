@@ -9,23 +9,30 @@ const s3Config = getInput("s3-config");
 const base = context.payload.pull_request?.base.ref;
 
 try {
-    if (!s3Config) {
-        throw new Error(`No s3 config specified!`);
-    }
+    const s3ConfigParsed:
+        | {
+              credentials: { accessKeyId: string; secretAccessKey: string };
+              Bucket: string;
+              region: string;
+          }
+        | undefined = s3Config && JSON.parse(s3Config);
 
-    const s3ConfigParsed = JSON.parse(s3Config);
-
-    const s3Client = new S3Client(s3ConfigParsed);
+    const s3Client = s3ConfigParsed && new S3Client(s3ConfigParsed);
 
     if (!monorepoBasePath) {
         throw new Error(`No monorepo-base-path specified!`);
     }
 
     if (context.payload.pull_request?.merged) {
+        if (!s3Client) {
+            throw new Error(`No s3 config specified!`);
+        }
+
         // upload new lcov base files to storage
         await uploadLvocFiles(
             s3Client,
             s3ConfigParsed.Bucket,
+            context.repo,
             monorepoBasePath,
             base,
         );
@@ -40,7 +47,7 @@ try {
         await generateReport(
             client,
             s3Client,
-            s3ConfigParsed.Bucket,
+            s3ConfigParsed?.Bucket,
             monorepoBasePath,
             context.repo,
             context.payload.pull_request.number,

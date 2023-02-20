@@ -12,7 +12,11 @@ const main = async () => {
     const monorepoBasePath = process.argv[3];
     const base = process.argv[4] || "master";
 
-    const s3Config = {
+    const s3Config: {
+        credentials: { accessKeyId: string; secretAccessKey: string };
+        Bucket: string;
+        region: string;
+    } = {
         credentials: {
             accessKeyId: "",
             secretAccessKey: "",
@@ -31,6 +35,7 @@ const main = async () => {
         await uploadLvocFiles(
             s3Client,
             s3Config.Bucket,
+            { owner: "@hokify", repo: "hokify-server" },
             monorepoBasePath,
             base,
         );
@@ -45,6 +50,7 @@ const main = async () => {
                 retrieveLcovBaseFiles(
                     s3Client,
                     s3Config.Bucket,
+                    { owner: "@hokify", repo: "hokify-server" },
                     monorepoBasePath,
                     base,
                     "master",

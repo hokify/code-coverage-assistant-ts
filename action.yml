@@ -13,7 +13,7 @@ inputs:
         required: true
     s3-config:
         description: 's3 config for lcov file storage, json encoded { credentials: { accessKeyId: "", secretAccessKey: "", }, region: "", Bucket: "repository-code-coverage" }'
-        required: true
+        required: false
 runs:
     using: node16
     main: dist/index.js

@@ -33,11 +33,12 @@ export function getLcovFiles(dir: string, filelist?: FileList) {
 }
 
 function filePath(
+    repo: Context["repo"],
     base: string,
     monorepoBasePath: string,
     file: { name: string },
 ) {
-    return `${base}/${monorepoBasePath}/${file.name}.lcov.info`;
+    return `${repo.owner}/${repo.repo}/${base}/${monorepoBasePath}/${file.name}.lcov.info`;
 }
 
 export async function retrieveLcovFiles(monorepoBasePath: string) {
@@ -73,6 +74,7 @@ export async function retrieveLcovFiles(monorepoBasePath: string) {
 export async function retrieveLcovBaseFiles(
     s3Client: S3Client,
     bucket: string,
+    repo: Context["repo"],
     monorepoBasePath: string,
     base: string,
     mainBase: string,
@@ -86,7 +88,7 @@ export async function retrieveLcovBaseFiles(
                 const data = await downloadFile(
                     s3Client,
                     bucket,
-                    filePath(base, monorepoBasePath, file),
+                    filePath(repo, base, monorepoBasePath, file),
                 );
                 lcovBaseArrayForMonorepo.push({
                     packageName: file.name,
@@ -102,7 +104,7 @@ export async function retrieveLcovBaseFiles(
                     const data = await downloadFile(
                         s3Client,
                         bucket,
-                        filePath(base, monorepoBasePath, file),
+                        filePath(repo, base, monorepoBasePath, file),
                     );
                     lcovBaseArrayForMonorepo.push({
                         packageName: file.name,
@@ -124,7 +126,8 @@ export async function retrieveLcovBaseFiles(
 
 export async function uploadLvocFiles(
     s3Client: S3Client,
-    bucket: string,
+    s3Bucket: string,
+    repo: Context["repo"],
     monorepoBasePath: string,
     base: string,
 ) {
@@ -137,8 +140,8 @@ export async function uploadLvocFiles(
             // console.log("file", file.name, file.path, rLcove.length);
             await uploadFile(
                 s3Client,
-                bucket,
-                filePath(base, monorepoBasePath, file),
+                s3Bucket,
+                filePath(repo, base, monorepoBasePath, file),
                 rLcove,
             );
         }),
@@ -147,8 +150,8 @@ export async function uploadLvocFiles(
 
 export async function generateReport(
     client: OktokitClient,
-    s3Client: S3Client,
-    bucket: string,
+    s3Client: S3Client | undefined,
+    s3Bucket: string | undefined,
     monorepoBasePath: string,
     repo: Context["repo"],
     prNumber: number,
@@ -158,13 +161,16 @@ export async function generateReport(
     const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] =
         await Promise.all([
             retrieveLcovFiles(monorepoBasePath),
-            retrieveLcovBaseFiles(
-                s3Client,
-                bucket,
-                monorepoBasePath,
-                base,
-                mainBase,
-            ),
+            (s3Client &&
+                s3Bucket &&
+                retrieveLcovBaseFiles(
+                    s3Client,
+                    s3Bucket,
+                    repo,
+                    monorepoBasePath,
+                    base,
+                    mainBase,
+                )) || { lcovBaseArrayForMonorepo: [] },
         ]);
 
     const options = {
