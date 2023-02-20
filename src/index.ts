@@ -39,7 +39,7 @@ try {
     } else {
         // generate diff report
         if (!context.payload.pull_request?.number) {
-            throw new Error("no pull request number");
+            throw new Error("no pull request number found in context");
         }
 
         const client = getOctokit(token);
@@ -54,8 +54,8 @@ try {
             base,
         );
     }
-} catch (err: any) {
+} catch (err) {
     // eslint-disable-next-line no-console
     console.log(err);
-    setFailed(err.message);
+    setFailed(err instanceof Error ? err.message : JSON.stringify(err));
 }

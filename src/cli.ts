@@ -7,7 +7,8 @@ import {
     uploadLvocFiles,
 } from "./app.js";
 
-const main = async () => {
+try {
+    // eslint-disable-next-line no-console
     console.log("process.argv", process.argv);
     const monorepoBasePath = process.argv[3];
     const base = process.argv[4] || "master";
@@ -25,13 +26,16 @@ const main = async () => {
         Bucket: "repository-code-coverage",
     };
 
-    const s3Client = new S3Client(s3Config);
+    const s3Client = (s3Config.region && new S3Client(s3Config)) || undefined;
 
     // eslint-disable-next-line no-console
     console.log("monorepoBasePath", monorepoBasePath);
 
     // const file = process.argv[2];
     if (process.argv[2] === "upload") {
+        if (!s3Client) {
+            throw new Error("need s3 client for upload");
+        }
         await uploadLvocFiles(
             s3Client,
             s3Config.Bucket,
@@ -39,22 +43,21 @@ const main = async () => {
             monorepoBasePath,
             base,
         );
+        // eslint-disable-next-line no-console
         console.log("lvoc files uploaded");
-        return;
-    }
-
-    if (process.argv[2] === "report") {
+    } else if (process.argv[2] === "report") {
         const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] =
             await Promise.all([
                 retrieveLcovFiles(monorepoBasePath),
-                retrieveLcovBaseFiles(
-                    s3Client,
-                    s3Config.Bucket,
-                    { owner: "@hokify", repo: "hokify-server" },
-                    monorepoBasePath,
-                    base,
-                    "master",
-                ),
+                (s3Client &&
+                    retrieveLcovBaseFiles(
+                        s3Client,
+                        s3Config.Bucket,
+                        { owner: "@hokify", repo: "hokify-server" },
+                        monorepoBasePath,
+                        base,
+                        "master",
+                    )) || { lcovBaseArrayForMonorepo: [] },
             ]);
 
         const options = {
@@ -70,14 +73,12 @@ const main = async () => {
                 options,
             ),
         );
-        return;
+    } else {
+        throw new Error('specify "report" or "upload" as first paremter');
     }
-
-    throw new Error('specify "report" or "upload" as first paremter');
-};
-
-main().catch((err) => {
+} catch (err) {
     // eslint-disable-next-line no-console
     console.log(err);
+    // eslint-disable-next-line no-process-exit
     process.exit(1);
-});
+}
