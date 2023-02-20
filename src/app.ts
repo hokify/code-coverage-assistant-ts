@@ -2,6 +2,7 @@ import { readdirSync, statSync, promises } from "node:fs";
 import * as path from "node:path";
 import { Context } from "@actions/github/lib/context.js";
 import { S3Client } from "@aws-sdk/client-s3";
+import { basename } from "node:path";
 import { LcovData, parse } from "./lcov.js";
 import { OktokitClient, upsertComment } from "./github.js";
 import { generateDiffForMonorepo } from "./comment.js";
@@ -11,7 +12,6 @@ import {
     renameFile,
     uploadFile,
 } from "./storage.js";
-
 /**
  * Find all files inside a dir, recursively.
  * @function getLcovFiles
@@ -175,12 +175,10 @@ export async function setTemporarLvocFilesAsBase(
             await renameFile(
                 s3Client,
                 s3Bucket,
-                filePath(repo, base, prNumber, monorepoBasePath, {
-                    name: file.Key,
-                }),
-                filePath(repo, base, undefined, monorepoBasePath, {
-                    name: file.Key,
-                }),
+                filePath(repo, base, prNumber, monorepoBasePath, undefined) +
+                    basename(file.Key),
+                filePath(repo, base, undefined, monorepoBasePath, undefined) +
+                    basename(file.Key),
             );
         }),
     );

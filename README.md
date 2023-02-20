@@ -73,8 +73,12 @@ jobs:
       monorepo-base-path: './packages'
 
 ```
-
 ![](/assets/example_diff.png)
+
+required permissions for S3:
+
+![](/assets/s3permissions.png)
+
 
 ## Development
 

@@ -4,6 +4,7 @@ import { generateDiffForMonorepo } from "./comment.js";
 import {
     retrieveLcovBaseFiles,
     retrieveLcovFiles,
+    setTemporarLvocFilesAsBase,
     uploadTemporaryLvocFiles,
 } from "./app.js";
 
@@ -32,14 +33,26 @@ try {
     console.log("monorepoBasePath", monorepoBasePath);
 
     // const file = process.argv[2];
-    if (process.argv[2] === "upload") {
+    if (process.argv[2] === "newbase") {
+        if (!s3Client) {
+            throw new Error("need s3 client for upload");
+        }
+        await setTemporarLvocFilesAsBase(
+            s3Client,
+            s3Config.Bucket,
+            { owner: "hokify", repo: "hokify-server" },
+            6391,
+            monorepoBasePath,
+            base,
+        );
+    } else if (process.argv[2] === "upload") {
         if (!s3Client) {
             throw new Error("need s3 client for upload");
         }
         await uploadTemporaryLvocFiles(
             s3Client,
             s3Config.Bucket,
-            { owner: "@hokify", repo: "hokify-server" },
+            { owner: "hokify", repo: "hokify-server" },
             1,
             monorepoBasePath,
             base,
@@ -75,7 +88,9 @@ try {
             ),
         );
     } else {
-        throw new Error('specify "report" or "upload" as first paremter');
+        throw new Error(
+            'specify "report" or "upload" or "newbase" as first paremter',
+        );
     }
 } catch (err) {
     // eslint-disable-next-line no-console

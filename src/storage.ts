@@ -31,7 +31,7 @@ export async function renameFile(
     await s3Client.send(
         new CopyObjectCommand({
             Bucket: bucket,
-            CopySource: fileFrom,
+            CopySource: `${bucket}/${fileFrom}`,
             Key: fileTo,
         }),
     );
