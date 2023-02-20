@@ -1,7 +1,11 @@
 import { getInput, setFailed } from "@actions/core";
 import { context, getOctokit } from "@actions/github";
 import { S3Client } from "@aws-sdk/client-s3";
-import { generateReport, uploadLvocFiles } from "./app.js";
+import {
+    generateReport,
+    setTemporarLvocFilesAsBase,
+    uploadTemporaryLvocFiles,
+} from "./app.js";
 
 const token = getInput("github-token");
 const monorepoBasePath = getInput("monorepo-base-path");
@@ -29,10 +33,11 @@ try {
         }
 
         // upload new lcov base files to storage
-        await uploadLvocFiles(
+        await setTemporarLvocFilesAsBase(
             s3Client,
             s3ConfigParsed.Bucket,
             context.repo,
+            context.payload.pull_request.number,
             monorepoBasePath,
             base,
         );
@@ -53,6 +58,17 @@ try {
             context.payload.pull_request.number,
             base,
         );
+
+        if (s3Client) {
+            await uploadTemporaryLvocFiles(
+                s3Client,
+                s3ConfigParsed.Bucket,
+                context.repo,
+                context.payload.pull_request.number,
+                monorepoBasePath,
+                base,
+            );
+        }
     }
 } catch (err) {
     // eslint-disable-next-line no-console

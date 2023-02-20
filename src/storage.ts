@@ -1,5 +1,8 @@
 import {
+    CopyObjectCommand,
+    DeleteObjectCommand,
     GetObjectCommand,
+    ListObjectsV2Command,
     PutObjectCommand,
     S3Client,
 } from "@aws-sdk/client-s3";
@@ -17,6 +20,43 @@ export async function uploadFile(
             Body: body,
         }),
     );
+}
+
+export async function renameFile(
+    s3Client: S3Client,
+    bucket: string,
+    fileFrom: string,
+    fileTo: string,
+) {
+    await s3Client.send(
+        new CopyObjectCommand({
+            Bucket: bucket,
+            CopySource: fileFrom,
+            Key: fileTo,
+        }),
+    );
+
+    await s3Client.send(
+        new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: fileFrom,
+        }),
+    );
+}
+
+export async function getFileList(
+    s3Client: S3Client,
+    bucket: string,
+    path: string,
+) {
+    const response = await s3Client.send(
+        new ListObjectsV2Command({
+            Bucket: bucket,
+            Prefix: path,
+        }),
+    );
+
+    return response.Contents || [];
 }
 
 export async function downloadFile(

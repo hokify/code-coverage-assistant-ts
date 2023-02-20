@@ -5,7 +5,12 @@ import { S3Client } from "@aws-sdk/client-s3";
 import { LcovData, parse } from "./lcov.js";
 import { OktokitClient, upsertComment } from "./github.js";
 import { generateDiffForMonorepo } from "./comment.js";
-import { downloadFile, uploadFile } from "./storage.js";
+import {
+    downloadFile,
+    getFileList,
+    renameFile,
+    uploadFile,
+} from "./storage.js";
 
 /**
  * Find all files inside a dir, recursively.
@@ -35,10 +40,13 @@ export function getLcovFiles(dir: string, filelist?: FileList) {
 function filePath(
     repo: Context["repo"],
     base: string,
+    prNumber: number | undefined,
     monorepoBasePath: string,
-    file: { name: string },
+    file?: { name: string },
 ) {
-    return `${repo.owner}/${repo.repo}/${base}/${monorepoBasePath}/${file.name}.lcov.info`;
+    return `${repo.owner}/${repo.repo}/${base}/${
+        prNumber ? `${prNumber}/` : ""
+    }${monorepoBasePath}/${file ? `${file.name}.lcov.info` : ""}`;
 }
 
 export async function retrieveLcovFiles(monorepoBasePath: string) {
@@ -88,7 +96,7 @@ export async function retrieveLcovBaseFiles(
                 const data = await downloadFile(
                     s3Client,
                     bucket,
-                    filePath(repo, base, monorepoBasePath, file),
+                    filePath(repo, base, undefined, monorepoBasePath, file),
                 );
                 lcovBaseArrayForMonorepo.push({
                     packageName: file.name,
@@ -104,7 +112,7 @@ export async function retrieveLcovBaseFiles(
                     const data = await downloadFile(
                         s3Client,
                         bucket,
-                        filePath(repo, base, monorepoBasePath, file),
+                        filePath(repo, base, undefined, monorepoBasePath, file),
                     );
                     lcovBaseArrayForMonorepo.push({
                         packageName: file.name,
@@ -124,10 +132,43 @@ export async function retrieveLcovBaseFiles(
     };
 }
 
-export async function uploadLvocFiles(
+export async function setTemporarLvocFilesAsBase(
     s3Client: S3Client,
     s3Bucket: string,
     repo: Context["repo"],
+    prNumber: number,
+    monorepoBasePath: string,
+    base: string,
+) {
+    // rename them to base
+    const files = await getFileList(
+        s3Client,
+        s3Bucket,
+        filePath(repo, base, prNumber, monorepoBasePath),
+    );
+    await Promise.all(
+        files.map(async (file) => {
+            if (!file.Key) return;
+            // console.log("file", file.name, file.path, rLcove.length);
+            await renameFile(
+                s3Client,
+                s3Bucket,
+                filePath(repo, base, prNumber, monorepoBasePath, {
+                    name: file.Key,
+                }),
+                filePath(repo, base, undefined, monorepoBasePath, {
+                    name: file.Key,
+                }),
+            );
+        }),
+    );
+}
+
+export async function uploadTemporaryLvocFiles(
+    s3Client: S3Client,
+    s3Bucket: string,
+    repo: Context["repo"],
+    prNumber: number,
     monorepoBasePath: string,
     base: string,
 ) {
@@ -141,7 +182,7 @@ export async function uploadLvocFiles(
             await uploadFile(
                 s3Client,
                 s3Bucket,
-                filePath(repo, base, monorepoBasePath, file),
+                filePath(repo, base, prNumber, monorepoBasePath, file),
                 rLcove,
             );
         }),
