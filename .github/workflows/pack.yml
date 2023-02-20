@@ -32,6 +32,7 @@ jobs:
           default_author: github_actions
 
   latest:
+    runs-on: ubuntu-latest
     steps:
       - name: Run latest-tag
         uses: EndBug/latest-tag@latest
