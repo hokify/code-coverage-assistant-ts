@@ -29,10 +29,6 @@ try {
         throw new Error(`failed parsing s3 config json: ${err}`);
     }
 
-    // todo debug
-    // eslint-disable-next-line no-console
-    console.log("s3ConfigParsed", s3ConfigParsed);
-
     const s3Client = s3ConfigParsed && new S3Client(s3ConfigParsed);
 
     if (!monorepoBasePath) {
@@ -45,7 +41,7 @@ try {
         }
 
         // upload new lcov base files to storage
-        await setTemporarLvocFilesAsBase(
+        const cnt = await setTemporarLvocFilesAsBase(
             s3Client,
             s3ConfigParsed.Bucket,
             context.repo,
@@ -53,6 +49,8 @@ try {
             monorepoBasePath,
             base,
         );
+        // eslint-disable-next-line no-console
+        console.info(`updated ${cnt} lcov files as new base`);
     } else {
         // generate diff report
         if (!context.payload.pull_request?.number) {
@@ -61,7 +59,7 @@ try {
 
         const client = getOctokit(token);
 
-        await generateReport(
+        const cntReport = await generateReport(
             client,
             s3Client,
             s3ConfigParsed?.Bucket,
@@ -71,8 +69,11 @@ try {
             base,
         );
 
+        // eslint-disable-next-line no-console
+        console.info(`generated report for ${cntReport} lcov files`);
+
         if (s3Client && s3ConfigParsed) {
-            await uploadTemporaryLvocFiles(
+            const cntUpload = await uploadTemporaryLvocFiles(
                 s3Client,
                 s3ConfigParsed.Bucket,
                 context.repo,
@@ -80,10 +81,12 @@ try {
                 monorepoBasePath,
                 base,
             );
+
+            // eslint-disable-next-line no-console
+            console.info(`uploaded ${cntUpload} temporary lcov files`);
         }
     }
 } catch (err) {
-    // eslint-disable-next-line no-console
-    console.log(err);
+    console.error(err);
     setFailed(err instanceof Error ? err.message : JSON.stringify(err));
 }

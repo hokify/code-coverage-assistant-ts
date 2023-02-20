@@ -85,9 +85,9 @@ Contributions are encouraged! Fork this repo and open a pull request.
 ### Commands
 
 | command  | description                                                                                               |
-| -------- | --------------------------------------------------------------------------------------------------------- |
+|----------| --------------------------------------------------------------------------------------------------------- |
 | `test`   | Run the unit tests                                                                                        |
-| `eslint` | Run eslint on all applicable files                                                                        |
+| `lint`   | Run eslint on all applicable files                                                                        |
 | `format` | Run prettier on all applicable files                                                                      |
 | `build`  | build the dist file. You are required to run this locally in order to build the dist before opening a PR. |
 

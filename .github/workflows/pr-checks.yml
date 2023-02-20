@@ -7,7 +7,7 @@ env:
     HUSKY_SKIP_INSTALL: true
 
 jobs:
-    eslint:
+    lint:
         name: Code quality
         runs-on: ubuntu-latest
         steps:
@@ -26,8 +26,8 @@ jobs:
                   key: ${{ runner.os }}-modules-${{ hashFiles('**/package-lock.json') }}
             - name: Install packages
               run: npm install
-            - name: ESLint
-              run: npm run eslint
+            - name: Lint
+              run: npm run lint
 
     tests:
         name: Unit tests

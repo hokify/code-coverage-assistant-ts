@@ -184,6 +184,7 @@ export async function setTemporarLvocFilesAsBase(
             );
         }),
     );
+    return files.length;
 }
 
 export async function uploadTemporaryLvocFiles(
@@ -209,6 +210,8 @@ export async function uploadTemporaryLvocFiles(
             );
         }),
     );
+
+    return lcovFiles.length;
 }
 
 export async function generateReport(
@@ -258,4 +261,6 @@ export async function generateReport(
             monorepoBasePath.split("/")[1]
         } -->`,
     );
+
+    return lcovArrayForMonorepo.length;
 }

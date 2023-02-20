@@ -24,9 +24,6 @@ jobs:
         run: npm run build
       - name: Pack
         run: npm run pack
-      - name: Check packed JS changes
-        id: packedJsStatus
-        run: echo ::set-output name=changes::$(git status ${{ env.PACKED_JS_PATH }} --porcelain)
       - name: Commit new build output
         uses: EndBug/add-and-commit@v9.1.1
         with:

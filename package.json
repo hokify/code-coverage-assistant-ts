@@ -21,7 +21,7 @@
         "test": "jest --passWithNoTests --coverage",
         "local": "babel-node src/cli",
         "format": "prettier --write src/*.js src/**/*.js *.js",
-        "eslint": "eslint --ext .ts src/ test/",
+        "lint": "eslint --ext .ts src/ test/",
         "pre-commit": "lint-staged"
     },
     "type": "module",
