@@ -4,7 +4,7 @@ import { generateDiffForMonorepo } from "./comment.js";
 import {
     retrieveLcovBaseFiles,
     retrieveLcovFiles,
-    uploadLvocFiles,
+    uploadTemporaryLvocFiles,
 } from "./app.js";
 
 try {
@@ -36,10 +36,11 @@ try {
         if (!s3Client) {
             throw new Error("need s3 client for upload");
         }
-        await uploadLvocFiles(
+        await uploadTemporaryLvocFiles(
             s3Client,
             s3Config.Bucket,
             { owner: "@hokify", repo: "hokify-server" },
+            1,
             monorepoBasePath,
             base,
         );
