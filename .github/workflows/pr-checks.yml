@@ -16,7 +16,7 @@ jobs:
               with:
                   fetch-depth: 0
             - name: Setup node
-              uses: actions/setup-node@v1
+              uses: actions/setup-node@v3
               with:
                   node-version: 16
             - name: Restore node_modules cache
@@ -38,7 +38,7 @@ jobs:
               with:
                   fetch-depth: 0
             - name: Setup node
-              uses: actions/setup-node@v1
+              uses: actions/setup-node@v3
               with:
                   node-version: 16
             - name: Restore node_modules cache
