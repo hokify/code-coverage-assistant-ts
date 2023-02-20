@@ -36,7 +36,7 @@ try {
     }
 
     if (context.payload.pull_request?.merged) {
-        if (!s3Client) {
+        if (!s3Client || !s3ConfigParsed) {
             throw new Error(`No s3 config specified!`);
         }
 
@@ -67,7 +67,7 @@ try {
             base,
         );
 
-        if (s3Client) {
+        if (s3Client && s3ConfigParsed) {
             await uploadTemporaryLvocFiles(
                 s3Client,
                 s3ConfigParsed.Bucket,
