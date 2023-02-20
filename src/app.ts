@@ -245,7 +245,7 @@ export async function generateReport(
         // prefix: `${process.env.GITHUB_WORKSPACE}/`,
         // head: context.payload.pull_request?.head.ref,
         base,
-        folder: monorepoBasePath.split("/")[1],
+        folder: monorepoBasePath,
     };
 
     await upsertComment(
@@ -257,9 +257,7 @@ export async function generateReport(
             lcovBaseArrayForMonorepo,
             options,
         ),
-        `<!-- monorepo-code-coverage-assistant--${
-            monorepoBasePath.split("/")[1]
-        } -->`,
+        `<!-- monorepo-code-coverage-assistant--${monorepoBasePath} -->`,
     );
 
     return lcovArrayForMonorepo.length;
