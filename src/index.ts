@@ -29,6 +29,10 @@ try {
         throw new Error(`failed parsing s3 config json: ${err}`);
     }
 
+    // todo debug
+    // eslint-disable-next-line no-console
+    console.log("s3ConfigParsed", s3ConfigParsed);
+
     const s3Client = s3ConfigParsed && new S3Client(s3ConfigParsed);
 
     if (!monorepoBasePath) {
