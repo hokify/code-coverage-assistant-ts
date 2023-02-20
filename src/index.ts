@@ -54,8 +54,8 @@ try {
             base,
         );
     }
-} catch (err: any) {
+} catch (err) {
     // eslint-disable-next-line no-console
     console.log(err);
-    setFailed(err.message);
+    setFailed(err instanceof Error ? err.message : JSON.stringify(err));
 }
