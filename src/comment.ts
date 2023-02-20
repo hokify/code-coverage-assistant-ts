@@ -7,8 +7,8 @@ import { LvocList } from "./app.js";
  * @param {number} pdiff value from diff percentage
  * @returns {string} emoji string for negative/positive pdiff
  */
-const renderEmoji = (pdiff) => {
-    if (pdiff.toFixed(2) < 0) return "❌";
+const renderEmoji = (pdiff: number) => {
+    if (pdiff < 0) return "❌";
 
     return "✅";
 };

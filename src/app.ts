@@ -114,6 +114,17 @@ export async function retrieveLcovBaseFiles(
                     s3Bucket,
                     filePath(repo, base, undefined, monorepoBasePath, file),
                 );
+                if (!data) {
+                    throw new Error(
+                        `failed to download: ${filePath(
+                            repo,
+                            base,
+                            undefined,
+                            monorepoBasePath,
+                            file,
+                        )}`,
+                    );
+                }
                 lcovBaseArrayForMonorepo.push({
                     packageName: file.name,
                     lcov: await parse(data),
@@ -136,6 +147,17 @@ export async function retrieveLcovBaseFiles(
                             file,
                         ),
                     );
+                    if (!data) {
+                        throw new Error(
+                            `failed to download: ${filePath(
+                                repo,
+                                mainBase,
+                                undefined,
+                                monorepoBasePath,
+                                file,
+                            )}`,
+                        );
+                    }
                     lcovBaseArrayForMonorepo.push({
                         packageName: file.name,
                         lcov: await parse(data),

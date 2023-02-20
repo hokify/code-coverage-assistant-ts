@@ -34,6 +34,7 @@
     "devDependencies": {
         "@hokify/eslint-config": "^2.4.0",
         "@types/jest": "^29.4.0",
+        "@types/lcov-parse": "^1.0.0",
         "@vercel/ncc": "^0.36.1",
         "eslint": "^8.27.0",
         "husky": ">=8.0.1",

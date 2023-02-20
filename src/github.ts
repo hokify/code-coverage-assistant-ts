@@ -16,7 +16,8 @@ import { GitHub } from "@actions/github/lib/utils.js";
 import { Context } from "@actions/github/lib/context.js";
 
 export type OktokitClient = InstanceType<typeof GitHub>;
-const appendHiddenHeaderToComment = (body, hiddenHeader) => hiddenHeader + body;
+const appendHiddenHeaderToComment = (body: string, hiddenHeader: string) =>
+    hiddenHeader + body;
 
 const listComments = async (
     client: OktokitClient,

@@ -3,8 +3,8 @@
 		"outDir": "./lib",
 		"rootDir": "./src",
 
-		// target settings for node 10
-		"module": "es2022",
+		// target settings for node 16
+		"module": "Node16",
 		"target": "ES2022",
 		"lib": ["ESNext"],
 		// "lib": ["esnext", "esnext.asynciterable", "dom"],
@@ -12,8 +12,6 @@
 		// other best practice configs
 		"moduleResolution": "node",
 		"strict": true,
-		"noImplicitAny": false, // <-- get rid of this!
-		"removeComments": false, // <-- do not remove comments (needed for @deprecated notices etc)
 		"emitDecoratorMetadata": true,
 		"composite": true,
 		"experimentalDecorators": true,
@@ -25,6 +23,6 @@
 		"skipLibCheck": true,
 		"esModuleInterop": true
 	},
-	"exclude": ["node_modules", "**/__tests__"],
+	"exclude": ["node_modules", "**/test"],
 	"include": ["./src"]
 }

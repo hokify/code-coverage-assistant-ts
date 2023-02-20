@@ -1,6 +1,6 @@
 const tag =
-    (name) =>
-    (...children) => {
+    (name: string) =>
+    (...children: any[]) => {
         const props =
             typeof children[0] === "object"
                 ? Object.keys(children[0])
@@ -23,4 +23,4 @@ export const tbody = tag("tbody");
 export const a = tag("a");
 export const span = tag("span");
 
-export const fragment = (...children) => children.join("");
+export const fragment = (...children: string[]) => children.join("");
