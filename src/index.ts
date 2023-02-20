@@ -39,7 +39,7 @@ try {
     } else {
         // generate diff report
         if (!context.payload.pull_request?.number) {
-            throw new Error("no pull request number");
+            throw new Error("no pull request number found in context");
         }
 
         const client = getOctokit(token);
