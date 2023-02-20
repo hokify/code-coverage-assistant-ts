@@ -20,8 +20,6 @@ jobs:
           node-version: 16
       - name: Install dependencies
         run: npm install
-      - name: Build
-        run: npm run build
       - name: Pack
         run: npm run pack
       - name: Commit new build output
