@@ -20,9 +20,10 @@ const renderEmoji = (pdiff: number) => {
 export const generateDiffForMonorepo = (
     lcovArrayForMonorepo: LvocList,
     lcovBaseArrayForMonorepo: LvocList,
-    options: { base: string; folder: string },
-): string => {
+    options: { base: string; folder: string; threshold: number },
+): { text: string; thresholdReached: number } => {
     const { base, folder } = options;
+    let thresholdReached = 0;
     const rows = lcovArrayForMonorepo.map((lcovObj) => {
         const baseLcov = lcovBaseArrayForMonorepo.find(
             (el) => el.packageName === lcovObj.packageName,
@@ -31,6 +32,10 @@ export const generateDiffForMonorepo = (
         const pbefore = baseLcov ? percentage(baseLcov.lcov) : 0;
         const pafter = baseLcov ? percentage(lcovObj.lcov) : 0;
         const pdiff = pafter - pbefore;
+
+        if (pdiff < -options.threshold) {
+            thresholdReached += 1;
+        }
         const plus = pdiff > 0 ? "+" : "";
 
         let arrow = "";
@@ -64,7 +69,14 @@ export const generateDiffForMonorepo = (
 
     const title = `Coverage for the ${b(folder)} folder after merging into ${b(
         base,
-    )} <p></p>`;
+    )} ${
+        thresholdReached
+            ? `warning: ${b(`decresased for ${thresholdReached} packages`)}`
+            : ":"
+    } <p></p>`;
 
-    return fragment(title, html);
+    return {
+        text: fragment(title, html),
+        thresholdReached,
+    };
 };

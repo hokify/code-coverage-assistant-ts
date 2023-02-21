@@ -23,11 +23,12 @@ Just add this action to one of your [workflow files](https://docs.github.com/en/
 
 The possible inputs for this action are:
 
-| Parameter                           | Description                                                                                                                                                                   | Default                |
-|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------------- |
-| `github-token` (**Required**)       | Github token used for posting the comment. To use the key provided by the GitHub action runner, use `${{ secrets.GITHUB_TOKEN }}`.                                            |                        |
-| `monorepo-base-path` (**Required**) | The location of your monrepo `packages` path                                                                                                                                  |                        |
-| `s3-config`          | Configuration for uploading lcov files to s3. Json Encoded. e.g. '{ credentials: { accessKeyId: "", secretAccessKey: "" }, region: "", Bucket: "repository-code-coverage" }'  |                        |
+| Parameter                           | Description                                                                                                                                                                  | Default |
+|-------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| `github-token` (**Required**)       | Github token used for posting the comment. To use the key provided by the GitHub action runner, use `${{ secrets.GITHUB_TOKEN }}`.                                           |         |
+| `monorepo-base-path` (**Required**) | The location of your monrepo `packages` path                                                                                                                                 |         |
+| `s3-config`                         | Configuration for uploading lcov files to s3. Json Encoded. e.g. '{ credentials: { accessKeyId: "", secretAccessKey: "" }, region: "", Bucket: "repository-code-coverage" }' |         |
+| `threshold`                         | Sets the threshold before the action fails if coverage of a package decreases                                                                                                | 0.1%    |
 
 ## Examples
 

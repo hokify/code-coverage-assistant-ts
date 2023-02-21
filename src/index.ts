@@ -10,6 +10,7 @@ import {
 const token = getInput("github-token");
 const monorepoBasePath = getInput("monorepo-base-path");
 const s3Config = getInput("s3-config");
+const threshold = getInput("threshold");
 const base = context.payload.pull_request?.base.ref;
 
 try {
@@ -59,7 +60,7 @@ try {
 
         const client = getOctokit(token);
 
-        const cntReport = await generateReport(
+        const resultReport = await generateReport(
             client,
             s3Client,
             s3ConfigParsed?.Bucket,
@@ -67,10 +68,14 @@ try {
             context.repo,
             context.payload.pull_request.number,
             base,
+            undefined,
+            (threshold && parseInt(threshold, 10)) || undefined,
         );
 
         // eslint-disable-next-line no-console
-        console.info(`generated report for ${cntReport} lcov files`);
+        console.info(
+            `generated report for ${resultReport.count} lcov files, ${resultReport.thresholdReached}x thresholds reached`,
+        );
 
         if (s3Client && s3ConfigParsed) {
             const cntUpload = await uploadTemporaryLvocFiles(
@@ -84,6 +89,12 @@ try {
 
             // eslint-disable-next-line no-console
             console.info(`uploaded ${cntUpload} temporary lcov files`);
+        }
+
+        if (resultReport.thresholdReached) {
+            setFailed(
+                `coverage decreased over threshold for ${resultReport.thresholdReached} packages`,
+            );
         }
     }
 } catch (err) {

@@ -243,6 +243,7 @@ export async function generateReport(
     prNumber: number,
     base: string,
     mainBase = "master",
+    threshold = 0.1,
 ) {
     const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] =
         await Promise.all([
@@ -266,19 +267,25 @@ export async function generateReport(
         // head: context.payload.pull_request?.head.ref,
         base,
         folder: monorepoBasePath,
+        threshold,
     };
+
+    const diff = generateDiffForMonorepo(
+        lcovArrayForMonorepo,
+        lcovBaseArrayForMonorepo,
+        options,
+    );
 
     await upsertComment(
         client,
         repo,
         prNumber,
-        generateDiffForMonorepo(
-            lcovArrayForMonorepo,
-            lcovBaseArrayForMonorepo,
-            options,
-        ),
+        diff.text,
         `<!-- monorepo-code-coverage-assistant--${monorepoBasePath} -->`,
     );
 
-    return lcovArrayForMonorepo.length;
+    return {
+        count: lcovArrayForMonorepo.length,
+        thresholdReached: diff.thresholdReached,
+    };
 }

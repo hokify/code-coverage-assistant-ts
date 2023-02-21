@@ -77,6 +77,7 @@ try {
         const options = {
             base: "base...",
             folder: monorepoBasePath.split("/")[1],
+            threshold: 0.1,
         };
 
         // eslint-disable-next-line no-console

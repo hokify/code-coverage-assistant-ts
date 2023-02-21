@@ -14,6 +14,9 @@ inputs:
     s3-config:
         description: 's3 config for lcov file storage, json encoded { credentials: { accessKeyId: "", secretAccessKey: "", }, region: "", Bucket: "repository-code-coverage" }'
         required: false
+    threshold:
+        description: 'minimum threshold (in %) before the action fails, default is 0.1%'
+        required: false
 runs:
     using: node16
     main: dist/index.js
