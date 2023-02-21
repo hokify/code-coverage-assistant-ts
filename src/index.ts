@@ -117,6 +117,19 @@ try {
                 (threshold && parseInt(threshold, 10)) || undefined,
             );
 
+            if (s3Client && s3ConfigParsed) {
+                await cleanUpNonchangedTemporaryLcovs(
+                    s3Client,
+                    s3ConfigParsed.Bucket,
+                    lcovArrayForMonorepo,
+                    lcovBaseArrayForMonorepo,
+                    context.repo,
+                    context.payload.pull_request.number,
+                    monorepoBasePath,
+                    base,
+                );
+            }
+
             // eslint-disable-next-line no-console
             console.info(
                 `generated report for ${resultReport.count} lcov files, ${resultReport.thresholdReached}x thresholds reached`,

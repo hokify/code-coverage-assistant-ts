@@ -103,7 +103,7 @@ try {
         );
 
         const resultReport = await generateReport(
-            getOctokit("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"),
+            getOctokit("token"),
             lcovArrayForMonorepo,
             lcovBaseArrayForMonorepo,
             monorepoBasePath,

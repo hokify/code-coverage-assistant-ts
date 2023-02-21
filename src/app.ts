@@ -22,18 +22,32 @@ import {
 
 export type FileList = { name: string; path: string }[];
 export type LvocList = { packageName: string; lcov: LcovData }[];
-export function getLcovFiles(dir: string, filelist?: FileList) {
+export function getLcovFiles(dir: string, filelist?: FileList, deepness = 0) {
     let fileArray = filelist || [];
     readdirSync(dir).forEach((file) => {
-        if (file === "node_modules") return;
-        fileArray = statSync(path.join(dir, file)).isDirectory()
-            ? getLcovFiles(path.join(dir, file), fileArray)
-            : fileArray
-                  .filter((f) => f.path.includes("lcov.info"))
-                  .concat({
-                      name: dir.split("/")[1],
-                      path: path.join(dir, file),
-                  });
+        const isDir = statSync(path.join(dir, file)).isDirectory();
+        if (isDir && file !== "node_modules" && deepness < 10) {
+            fileArray = getLcovFiles(
+                path.join(dir, file),
+                fileArray,
+                deepness + 1,
+            );
+        } else if (!isDir && file.endsWith("lcov.info")) {
+            const name = dir.split("/")[1];
+            const existing = fileArray.find((f) => f.name === name);
+            if (existing) {
+                console.warn(
+                    `found more than one lcov file for ${name}: ${path.join(
+                        dir,
+                        file,
+                    )}`,
+                );
+            }
+            fileArray.push({
+                name,
+                path: path.join(dir, file),
+            });
+        }
     });
 
     return fileArray;
@@ -58,34 +72,32 @@ export async function retrieveLocalLcovFiles(
 
     const lcovArrayForMonorepo: LvocList = [];
     for (const file of lcovArray) {
-        if (file.path.includes(".info")) {
+        try {
+            const rLcove = await promises.readFile(file.path, "utf8");
+            const data = await parse(rLcove);
+            lcovArrayForMonorepo.push({
+                packageName: file.name,
+                lcov: data,
+            });
+        } catch (error) {
             try {
-                const rLcove = await promises.readFile(file.path, "utf8");
-                const data = await parse(rLcove);
-                lcovArrayForMonorepo.push({
-                    packageName: file.name,
-                    lcov: data,
-                });
-            } catch (error) {
-                try {
-                    const stats = statSync(file.path);
-                    console.error(
-                        `The LCOV file ${JSON.stringify(
-                            file,
-                        )} cannot be parsed. The file may be generated empty, filesize in bytes: ${
-                            stats.size
-                        }`,
-                    );
-                } catch (err) {
-                    console.error(
-                        `The LCOV file ${JSON.stringify(
-                            file,
-                        )} cannot be parsed. The file does not exist?`,
-                    );
-                }
-
-                throw error;
+                const stats = statSync(file.path);
+                console.error(
+                    `The LCOV file ${JSON.stringify(
+                        file,
+                    )} cannot be parsed. The file may be generated empty, filesize in bytes: ${
+                        stats.size
+                    }`,
+                );
+            } catch (err) {
+                console.error(
+                    `The LCOV file ${JSON.stringify(
+                        file,
+                    )} cannot be parsed. The file does not exist?`,
+                );
             }
+
+            throw error;
         }
     }
 
@@ -109,7 +121,6 @@ export async function retrieveTemporaryLcovFiles(
         s3Bucket,
         filePath(repo, base, prNumber, monorepoBasePath),
     );
-    console.log("files", files);
     await Promise.all(
         files.map(async (file) => {
             if (!file.Key) return;
