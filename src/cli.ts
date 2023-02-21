@@ -1,13 +1,18 @@
 import * as process from "node:process";
 import { S3Client } from "@aws-sdk/client-s3";
-import { generateDiffForMonorepo } from "./comment.js";
+import { getOctokit } from "@actions/github";
 import {
+    cleanUpNonchangedTemporaryLcovs,
+    generateReport,
     retrieveLcovBaseFiles,
-    retrieveLcovFiles,
+    retrieveTemporaryLcovFiles,
     setTemporarLvocFilesAsBase,
     uploadTemporaryLvocFiles,
 } from "./app.js";
 
+const context = {
+    repo: { owner: "hokify", repo: "hokify-server" },
+};
 try {
     // eslint-disable-next-line no-console
     console.log("process.argv", process.argv);
@@ -26,7 +31,6 @@ try {
         region: "",
         Bucket: "repository-code-coverage",
     };
-
     const s3Client = (s3Config.region && new S3Client(s3Config)) || undefined;
 
     // eslint-disable-next-line no-console
@@ -60,33 +64,57 @@ try {
         // eslint-disable-next-line no-console
         console.log("lvoc files uploaded");
     } else if (process.argv[2] === "report") {
+        // const client = getOctokit(token);
+
+        if (!s3Client || !s3Config) {
+            throw new Error("mode 'report' requireds s3 config");
+        }
+
+        const prNumber = 6419;
         const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] =
             await Promise.all([
-                retrieveLcovFiles(monorepoBasePath),
-                (s3Client &&
-                    retrieveLcovBaseFiles(
-                        s3Client,
-                        s3Config.Bucket,
-                        { owner: "@hokify", repo: "hokify-server" },
-                        monorepoBasePath,
-                        base,
-                        "master",
-                    )) || { lcovBaseArrayForMonorepo: [] },
+                retrieveTemporaryLcovFiles(
+                    s3Client,
+                    s3Config.Bucket,
+                    context.repo,
+                    prNumber,
+                    monorepoBasePath,
+                    base,
+                ),
+                retrieveLcovBaseFiles(
+                    s3Client,
+                    s3Config.Bucket,
+                    context.repo,
+                    monorepoBasePath,
+                    base,
+                    "master",
+                ),
             ]);
 
-        const options = {
-            base: "base...",
-            folder: monorepoBasePath.split("/")[1],
-            threshold: 0.05,
-        };
+        await cleanUpNonchangedTemporaryLcovs(
+            s3Client,
+            s3Config.Bucket,
+            lcovArrayForMonorepo,
+            lcovBaseArrayForMonorepo,
+            context.repo,
+            prNumber,
+            monorepoBasePath,
+            base,
+        );
+
+        const resultReport = await generateReport(
+            getOctokit("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"),
+            lcovArrayForMonorepo,
+            lcovBaseArrayForMonorepo,
+            monorepoBasePath,
+            context.repo,
+            prNumber,
+            base,
+        );
 
         // eslint-disable-next-line no-console
-        console.log(
-            generateDiffForMonorepo(
-                lcovArrayForMonorepo,
-                lcovBaseArrayForMonorepo,
-                options,
-            ),
+        console.info(
+            `generated report for ${resultReport.count} lcov files, ${resultReport.thresholdReached}x thresholds reached`,
         );
     } else {
         throw new Error(

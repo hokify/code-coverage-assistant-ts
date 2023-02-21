@@ -22,6 +22,19 @@ export async function uploadFile(
     );
 }
 
+export async function deleteFile(
+    s3Client: S3Client,
+    bucket: string,
+    file: string,
+) {
+    await s3Client.send(
+        new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: file,
+        }),
+    );
+}
+
 export async function renameFile(
     s3Client: S3Client,
     bucket: string,
@@ -36,12 +49,7 @@ export async function renameFile(
         }),
     );
 
-    await s3Client.send(
-        new DeleteObjectCommand({
-            Bucket: bucket,
-            Key: fileFrom,
-        }),
-    );
+    deleteFile(s3Client, bucket, fileFrom);
 }
 
 export async function getFileList(

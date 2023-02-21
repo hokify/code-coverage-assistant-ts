@@ -7,6 +7,7 @@ import { LcovData, parse } from "./lcov.js";
 import { OktokitClient, upsertComment } from "./github.js";
 import { generateDiffForMonorepo } from "./comment.js";
 import {
+    deleteFile,
     downloadFile,
     getFileList,
     renameFile,
@@ -24,6 +25,7 @@ export type LvocList = { packageName: string; lcov: LcovData }[];
 export function getLcovFiles(dir: string, filelist?: FileList) {
     let fileArray = filelist || [];
     readdirSync(dir).forEach((file) => {
+        if (file === "node_modules") return;
         fileArray = statSync(path.join(dir, file)).isDirectory()
             ? getLcovFiles(path.join(dir, file), fileArray)
             : fileArray
@@ -49,7 +51,9 @@ function filePath(
     }${monorepoBasePath}/${file ? `${file.name}.lcov.info` : ""}`;
 }
 
-export async function retrieveLcovFiles(monorepoBasePath: string) {
+export async function retrieveLocalLcovFiles(
+    monorepoBasePath: string,
+): Promise<{ lcovArrayForMonorepo: LvocList }> {
     const lcovArray = getLcovFiles(monorepoBasePath);
 
     const lcovArrayForMonorepo: LvocList = [];
@@ -90,6 +94,52 @@ export async function retrieveLcovFiles(monorepoBasePath: string) {
     };
 }
 
+export async function retrieveTemporaryLcovFiles(
+    s3Client: S3Client,
+    s3Bucket: string,
+    repo: Context["repo"],
+    prNumber: number,
+    monorepoBasePath: string,
+    base: string,
+): Promise<{ lcovArrayForMonorepo: LvocList }> {
+    const lcovArrayForMonorepo: LvocList = [];
+
+    const files = await getFileList(
+        s3Client,
+        s3Bucket,
+        filePath(repo, base, prNumber, monorepoBasePath),
+    );
+    console.log("files", files);
+    await Promise.all(
+        files.map(async (file) => {
+            if (!file.Key) return;
+            const remotePath =
+                filePath(repo, base, prNumber, monorepoBasePath, undefined) +
+                basename(file.Key);
+            // eslint-disable-next-line no-console
+            console.info("getting temporary lcov file from", remotePath);
+
+            // console.log("file", file.name, file.path, rLcove.length);
+            const data = await downloadFile(s3Client, s3Bucket, remotePath);
+
+            if (!data) {
+                throw new Error(`failed to download: ${remotePath}`);
+            }
+            try {
+                lcovArrayForMonorepo.push({
+                    packageName: basename(file.Key).replace(/.lcov.info$/, ""),
+                    lcov: await parse(data),
+                });
+            } catch (err) {
+                console.error(
+                    `failed to parse ${remotePath}: ${err} (filesize in bytes: ${data.length})`,
+                );
+            }
+        }),
+    );
+    return { lcovArrayForMonorepo };
+}
+
 export async function retrieveLcovBaseFiles(
     s3Client: S3Client,
     s3Bucket: string,
@@ -97,7 +147,7 @@ export async function retrieveLcovBaseFiles(
     monorepoBasePath: string,
     base: string,
     mainBase: string,
-) {
+): Promise<{ lcovBaseArrayForMonorepo: LvocList }> {
     const lcovArray = getLcovFiles(monorepoBasePath);
 
     const lcovBaseArrayForMonorepo: LvocList = [];
@@ -236,30 +286,14 @@ export async function uploadTemporaryLvocFiles(
 
 export async function generateReport(
     client: OktokitClient,
-    s3Client: S3Client | undefined,
-    s3Bucket: string | undefined,
+    lcovArrayForMonorepo: LvocList,
+    lcovBaseArrayForMonorepo: LvocList = [],
     monorepoBasePath: string,
     repo: Context["repo"],
     prNumber: number,
     base: string,
-    mainBase = "master",
     threshold = 0.05,
 ) {
-    const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] =
-        await Promise.all([
-            retrieveLcovFiles(monorepoBasePath),
-            (s3Client &&
-                s3Bucket &&
-                retrieveLcovBaseFiles(
-                    s3Client,
-                    s3Bucket,
-                    repo,
-                    monorepoBasePath,
-                    base,
-                    mainBase,
-                )) || { lcovBaseArrayForMonorepo: [] },
-        ]);
-
     const options = {
         // repository: context.payload.repository?.full_name,
         // commit: context.payload.pull_request?.head.sha,
@@ -288,4 +322,41 @@ export async function generateReport(
         count: lcovArrayForMonorepo.length,
         thresholdReached: diff.thresholdReached,
     };
+}
+
+export async function cleanUpNonchangedTemporaryLcovs(
+    s3Client: S3Client,
+    s3Bucket: string,
+    lcovArrayForMonorepo: LvocList,
+    lcovBaseArrayForMonorepo: LvocList = [],
+    repo: Context["repo"],
+    prNumber: number,
+    monorepoBasePath: string,
+    base: string,
+) {
+    // remove temporary coverage files that are equal to the base
+    await Promise.all(
+        lcovArrayForMonorepo.map(async (lcov) => {
+            const baseLcov = lcovBaseArrayForMonorepo.find(
+                (l) => l.packageName === lcov.packageName,
+            );
+            if (
+                baseLcov &&
+                JSON.stringify(baseLcov.lcov) === JSON.stringify(lcov.lcov)
+            ) {
+                // eslint-disable-next-line no-console
+                console.info(
+                    "removing non needed temporary lcov file (identical to base) for ",
+                    lcov.packageName,
+                );
+                await deleteFile(
+                    s3Client,
+                    s3Bucket,
+                    filePath(repo, base, prNumber, monorepoBasePath, {
+                        name: lcov.packageName,
+                    }),
+                );
+            }
+        }),
+    );
 }
