@@ -243,7 +243,7 @@ export async function generateReport(
     prNumber: number,
     base: string,
     mainBase = "master",
-    threshold = 0.1,
+    threshold = 0.05,
 ) {
     const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] =
         await Promise.all([
