@@ -3,7 +3,7 @@ import { percentage } from "./lcov.js";
 import { LvocList } from "./app.js";
 
 const renderEmoji = (pdiff: number) => {
-    if (pdiff < 0.01) return ":x:";
+    if (pdiff < -0.01) return ":x:";
 
     if (pdiff > 0.01) return ":heavy_check_mark:";
 
