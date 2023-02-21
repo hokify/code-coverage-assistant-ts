@@ -2,15 +2,12 @@ import { b, fragment, table, tbody, tr, th } from "./html.js";
 import { percentage } from "./lcov.js";
 import { LvocList } from "./app.js";
 
-/**
- * Compares two arrays of objects and returns with unique lines update
- * @param {number} pdiff value from diff percentage
- * @returns {string} emoji string for negative/positive pdiff
- */
 const renderEmoji = (pdiff: number) => {
-    if (pdiff < 0) return "❌";
+    if (pdiff < 0.01) return ":x:";
 
-    return "✅";
+    if (pdiff > 0.01) return ":heavy_check_mark:";
+
+    return ":white_check_mark:";
 };
 
 /**
@@ -52,6 +49,7 @@ export const generateDiffForMonorepo = (
                   plus,
                   pdiff.toFixed(2),
                   "%",
+                  pdiff > 10 ? " :green_heart:" : "",
               )
             : th(" N/A ");
 
