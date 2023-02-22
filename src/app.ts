@@ -15,36 +15,42 @@ import {
 } from "./storage.js";
 /**
  * Find all files inside a dir, recursively.
- * @function getLcovFiles
+ * @function getLocalLcovFileList
  * @param  {string} dir Dir path string.
  * @return {string[{<package_name>: <path_to_lcov_file>}]} Array with lcove file names with package names as key.
  */
 
-export type FileList = { name: string; path: string }[];
+export type FileList = { packageName: string; path: string }[];
 export type LvocList = { packageName: string; lcov: LcovData }[];
-export function getLcovFiles(dir: string, filelist?: FileList, deepness = 0) {
+export function getLocalLcovFileList(
+    dir: string,
+    filelist?: FileList,
+    deepness = 0,
+) {
     let fileArray = filelist || [];
     readdirSync(dir).forEach((file) => {
         const isDir = statSync(path.join(dir, file)).isDirectory();
         if (isDir && file !== "node_modules" && deepness < 10) {
-            fileArray = getLcovFiles(
+            fileArray = getLocalLcovFileList(
                 path.join(dir, file),
                 fileArray,
                 deepness + 1,
             );
         } else if (!isDir && file.endsWith("lcov.info")) {
-            const name = dir.split("/")[1];
-            const existing = fileArray.find((f) => f.name === name);
+            const packageName = dir.split("/")[1];
+            const existing = fileArray.find(
+                (f) => f.packageName === packageName,
+            );
             if (existing) {
                 console.warn(
-                    `found more than one lcov file for ${name}: ${path.join(
+                    `found more than one lcov file for ${packageName}: ${path.join(
                         dir,
                         file,
                     )}`,
                 );
             }
             fileArray.push({
-                name,
+                packageName,
                 path: path.join(dir, file),
             });
         }
@@ -58,25 +64,23 @@ function filePath(
     base: string,
     prNumber: number | undefined,
     monorepoBasePath: string,
-    file?: { name: string },
+    file?: { packageName: string },
 ) {
     return `${repo.owner}/${repo.repo}/${base}/${
         prNumber ? `${prNumber}/` : ""
-    }${monorepoBasePath}/${file ? `${file.name}.lcov.info` : ""}`;
+    }${monorepoBasePath}/${file ? `${file.packageName}.lcov.info` : ""}`;
 }
 
 export async function retrieveLocalLcovFiles(
-    monorepoBasePath: string,
+    fileList: FileList,
 ): Promise<{ lcovArrayForMonorepo: LvocList }> {
-    const lcovArray = getLcovFiles(monorepoBasePath);
-
     const lcovArrayForMonorepo: LvocList = [];
-    for (const file of lcovArray) {
+    for (const file of fileList) {
         try {
             const rLcove = await promises.readFile(file.path, "utf8");
             const data = await parse(rLcove);
             lcovArrayForMonorepo.push({
-                packageName: file.name,
+                packageName: file.packageName,
                 lcov: data,
             });
         } catch (error) {
@@ -152,6 +156,7 @@ export async function retrieveTemporaryLcovFiles(
 }
 
 export async function retrieveLcovBaseFiles(
+    fileList: { packageName: string }[],
     s3Client: S3Client,
     s3Bucket: string,
     repo: Context["repo"],
@@ -159,11 +164,9 @@ export async function retrieveLcovBaseFiles(
     base: string,
     mainBase: string,
 ): Promise<{ lcovBaseArrayForMonorepo: LvocList }> {
-    const lcovArray = getLcovFiles(monorepoBasePath);
-
     const lcovBaseArrayForMonorepo: LvocList = [];
     await Promise.all(
-        lcovArray.map(async (file) => {
+        fileList.map(async (file) => {
             try {
                 // eslint-disable-next-line no-console
                 console.info(
@@ -187,7 +190,7 @@ export async function retrieveLcovBaseFiles(
                     );
                 }
                 lcovBaseArrayForMonorepo.push({
-                    packageName: file.name,
+                    packageName: file.packageName,
                     lcov: await parse(data),
                 });
             } catch (err) {
@@ -220,12 +223,12 @@ export async function retrieveLcovBaseFiles(
                         );
                     }
                     lcovBaseArrayForMonorepo.push({
-                        packageName: file.name,
+                        packageName: file.packageName,
                         lcov: await parse(data),
                     });
                 } catch (secondTryErr) {
                     console.warn(
-                        `no base lcov file found for ${file.name}: ${secondTryErr}`,
+                        `no base lcov file found for ${file.packageName}: ${secondTryErr}`,
                     );
                 }
             }
@@ -269,6 +272,7 @@ export async function setTemporarLvocFilesAsBase(
 }
 
 export async function uploadTemporaryLvocFiles(
+    fileList: FileList,
     s3Client: S3Client,
     s3Bucket: string,
     repo: Context["repo"],
@@ -276,11 +280,9 @@ export async function uploadTemporaryLvocFiles(
     monorepoBasePath: string,
     base: string,
 ) {
-    const lcovFiles = await getLcovFiles(monorepoBasePath);
-
     // upload them
     await Promise.all(
-        lcovFiles.map(async (file) => {
+        fileList.map(async (file) => {
             const rLcove = await promises.readFile(file.path, "utf8");
             // console.log("file", file.name, file.path, rLcove.length);
             await uploadFile(
@@ -291,8 +293,6 @@ export async function uploadTemporaryLvocFiles(
             );
         }),
     );
-
-    return lcovFiles.length;
 }
 
 export async function generateReport(
@@ -345,6 +345,7 @@ export async function cleanUpNonchangedTemporaryLcovs(
     monorepoBasePath: string,
     base: string,
 ) {
+    let cleaned = 0;
     // remove temporary coverage files that are equal to the base
     await Promise.all(
         lcovArrayForMonorepo.map(async (lcov) => {
@@ -360,14 +361,14 @@ export async function cleanUpNonchangedTemporaryLcovs(
                     "removing non needed temporary lcov file (identical to base) for ",
                     lcov.packageName,
                 );
+                cleaned += 1;
                 await deleteFile(
                     s3Client,
                     s3Bucket,
-                    filePath(repo, base, prNumber, monorepoBasePath, {
-                        name: lcov.packageName,
-                    }),
+                    filePath(repo, base, prNumber, monorepoBasePath, lcov),
                 );
             }
         }),
     );
+    return cleaned;
 }

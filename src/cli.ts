@@ -4,6 +4,7 @@ import { getOctokit } from "@actions/github";
 import {
     cleanUpNonchangedTemporaryLcovs,
     generateReport,
+    getLocalLcovFileList,
     retrieveLcovBaseFiles,
     retrieveTemporaryLcovFiles,
     setTemporarLvocFilesAsBase,
@@ -31,6 +32,7 @@ try {
         region: "",
         Bucket: "repository-code-coverage",
     };
+
     const s3Client = (s3Config.region && new S3Client(s3Config)) || undefined;
 
     // eslint-disable-next-line no-console
@@ -53,7 +55,9 @@ try {
         if (!s3Client) {
             throw new Error("need s3 client for upload");
         }
+        const lcovFileList = getLocalLcovFileList(monorepoBasePath);
         await uploadTemporaryLvocFiles(
+            lcovFileList,
             s3Client,
             s3Config.Bucket,
             { owner: "hokify", repo: "hokify-server" },
@@ -71,6 +75,7 @@ try {
         }
 
         const prNumber = 6419;
+        const lcovFileList = getLocalLcovFileList(monorepoBasePath);
         const [{ lcovArrayForMonorepo }, { lcovBaseArrayForMonorepo }] =
             await Promise.all([
                 retrieveTemporaryLcovFiles(
@@ -82,6 +87,7 @@ try {
                     base,
                 ),
                 retrieveLcovBaseFiles(
+                    lcovFileList,
                     s3Client,
                     s3Config.Bucket,
                     context.repo,
