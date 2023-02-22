@@ -18,7 +18,7 @@ inputs:
         description: 'minimum threshold (in %) before the action fails, default is 0.05%'
         required: false
     mode:
-      description: 'overwrite mode manually: merge (on merge) | generate (upload tmp files)  | report (generate report), if not specified it combiens generate and report in one step'
+      description: 'overwrite mode manually: collect (upload tmp files)  | report (generate report) | merge (on merge)'
       required: false
 runs:
     using: node16

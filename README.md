@@ -29,6 +29,7 @@ The possible inputs for this action are:
 | `monorepo-base-path` (**Required**) | The location of your monrepo `packages` path                                                                                                                                 |         |
 | `s3-config`                         | Configuration for uploading lcov files to s3. Json Encoded. e.g. '{ credentials: { accessKeyId: "", secretAccessKey: "" }, region: "", Bucket: "repository-code-coverage" }' |         |
 | `threshold`                         | Sets the threshold before the action fails if coverage of a package decreases                                                                                                | 0.05%   |
+| `mode`                              | collect: upload lcov files to s3, report: generate report, merge: set new base                                                                                               | (auto)  |
 
 ## Examples
 
