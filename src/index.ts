@@ -17,6 +17,7 @@ const token = getInput("github-token");
 const monorepoBasePath = getInput("monorepo-base-path");
 const s3Config = getInput("s3-config");
 const threshold = getInput("threshold");
+const failOnThreshold = !!getInput("fail-on-threshold");
 const mode = getInput("mode");
 const base = context.payload.pull_request?.base.ref;
 
@@ -148,9 +149,12 @@ try {
         }
 
         if (resultReport.thresholdReached) {
-            setFailed(
-                `coverage decreased over threshold for ${resultReport.thresholdReached} packages`,
-            );
+            const message = `coverage decreased over threshold for ${resultReport.thresholdReached} packages`;
+            if (failOnThreshold) {
+                setFailed(message);
+            } else {
+                console.warn(message);
+            }
         }
     }
 

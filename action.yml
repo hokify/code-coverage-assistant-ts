@@ -1,6 +1,6 @@
 name: Code Coverage Report with S3 Backend
 description: Comments a pull request with the code coverage for mono repo and single repo and stores lcov files inside a s3 repository
-author: "Simon Tretter, based on work of Eesh Tyagi, Marina and John Hannagan"
+author: 'Simon Tretter, based on work of Eesh Tyagi, Marina and John Hannagan'
 branding:
     icon: check-square
     color: green
@@ -18,8 +18,12 @@ inputs:
         description: 'minimum threshold (in %) before the action fails, default is 0.05%'
         required: false
     mode:
-      description: 'overwrite mode manually: collect (upload tmp files)  | report (generate report) | merge (on merge)'
-      required: false
+        description: 'overwrite mode manually: collect (upload tmp files)  | report (generate report) | merge (on merge)'
+        required: false
+    fail-on-threshold:
+        description: 'whether the action should fail if threshold is reached'
+        required: false
+        default: false
 runs:
     using: node16
     main: dist/index.js
