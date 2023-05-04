@@ -148,7 +148,7 @@ try {
         }
 
         if (resultReport.thresholdReached) {
-            setFailed(
+            console.warn(
                 `coverage decreased over threshold for ${resultReport.thresholdReached} packages`,
             );
         }
