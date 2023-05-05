@@ -23,7 +23,7 @@ inputs:
     fail-on-threshold:
         description: 'whether the action should fail if threshold is reached'
         required: false
-        default: false
+        default: true
 runs:
     using: node16
     main: dist/index.js
