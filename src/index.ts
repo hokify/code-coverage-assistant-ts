@@ -17,7 +17,7 @@ const token = getInput("github-token");
 const monorepoBasePath = getInput("monorepo-base-path");
 const s3Config = getInput("s3-config");
 const threshold = getInput("threshold");
-const failOnThreshold = !!getInput("fail-on-threshold");
+const failOnThreshold = getInput("fail-on-threshold") !== "false";
 const mode = getInput("mode");
 const base = context.payload.pull_request?.base.ref;
 
